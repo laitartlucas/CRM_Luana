@@ -21,4 +21,4 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 EXPOSE 3000
 # Aplica migrações pendentes e só então sobe a API — seguro para reiniciar
 # o container quantas vezes for preciso (migrate deploy é idempotente).
-CMD sh -c "npx prisma migrate deploy && node dist/main"
+CMD sh -c "npx prisma migrate deploy && node dist/src/main"
