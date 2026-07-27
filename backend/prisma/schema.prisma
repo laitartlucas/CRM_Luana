@@ -1,0 +1,324 @@
+// Schema do CRM de agenda para consultoria de imagem.
+// Ver docs/02-modelo-de-dados.md para o racional de cada decisão.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [btree_gist]
+}
+
+// -----------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  MANAGER
+  ATTENDANT
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentLocation {
+  PRESENCIAL
+  ONLINE
+}
+
+enum AppointmentSource {
+  WEB
+  WHATSAPP
+  GOOGLE
+}
+
+enum ScheduleBlockType {
+  LUNCH
+  DAY_OFF
+  HOLIDAY
+  OTHER
+}
+
+enum ClientMediaType {
+  PHOTO
+  MOODBOARD
+  OTHER
+}
+
+enum MediaSource {
+  WHATSAPP
+  UPLOAD
+}
+
+enum ConversationChannel {
+  WHATSAPP
+  INSTAGRAM
+  SMS
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  TEMPLATE
+  SYSTEM
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+// -----------------------------------------------------------------------
+// Identidade e agenda dos profissionais
+// -----------------------------------------------------------------------
+
+model User {
+  id           String  @id @default(uuid())
+  name         String
+  email        String  @unique
+  passwordHash String?
+  googleId     String? @unique
+  role         Role    @default(ATTENDANT)
+  timezone     String  @default("America/Sao_Paulo")
+  active       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments       Appointment[]
+  scheduleBlocks      ScheduleBlock[]
+  googleConnection    GoogleCalendarConnection?
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model GoogleCalendarConnection {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleCalendarId String
+  accessToken      String // criptografado (AES-256-GCM) na camada de aplicação
+  refreshToken     String // criptografado (AES-256-GCM) na camada de aplicação
+  expiresAt        DateTime
+  syncToken        String?
+  channelId        String?
+  resourceId       String?
+  channelExpiresAt DateTime?
+  connectedAt      DateTime @default(now())
+  lastSyncAt       DateTime?
+  lastSyncError    String?
+
+  @@map("google_calendar_connections")
+}
+
+model ScheduleBlock {
+  id              String            @id @default(uuid())
+  professionalId  String
+  professional    User              @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  startAt         DateTime
+  endAt           DateTime
+  type            ScheduleBlockType
+  recurrenceRule  String? // RFC5545 RRULE, ex.: "FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR"
+  reason          String?
+  // Preenchido quando o bloqueio é um espelho de um evento criado
+  // diretamente no Google Calendar (fora do CRM) — permite ao
+  // CalendarSyncService atualizar/remover o espelho quando o evento
+  // original mudar ou for apagado no Google.
+  googleEventId   String?           @unique
+  createdAt       DateTime          @default(now())
+
+  @@index([professionalId, startAt, endAt])
+  @@map("schedule_blocks")
+}
+
+// -----------------------------------------------------------------------
+// Clientes
+// -----------------------------------------------------------------------
+
+model Client {
+  id          String    @id @default(uuid())
+  name        String
+  phoneE164   String    @unique
+  email       String?
+  birthday    DateTime?
+
+  // Ficha de estilo
+  bodyType          String?
+  colorPalette      String?
+  predominantStyle  String?
+  averageBudget     Decimal? @db.Decimal(10, 2)
+  preferredBrands   String[] @default([])
+  restrictions      String?
+  notes             String?
+
+  // LGPD
+  whatsappConsent    Boolean   @default(false)
+  whatsappConsentAt  DateTime?
+  marketingConsent   Boolean   @default(false)
+  marketingConsentAt DateTime?
+  anonymizedAt       DateTime?
+
+  // Inteligência (Fase 2 alimenta este campo; existe desde o MVP para não migrar schema depois)
+  noShowScore Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments  Appointment[]
+  media         ClientMedia[]
+  conversations Conversation[]
+
+  @@map("clients")
+}
+
+model ClientMedia {
+  id            String          @id @default(uuid())
+  clientId      String
+  client        Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  appointmentId String?
+  appointment   Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  type          ClientMediaType @default(PHOTO)
+  source        MediaSource     @default(UPLOAD)
+  storageUrl    String
+  caption       String?
+  createdAt     DateTime        @default(now())
+
+  @@map("client_media")
+}
+
+// -----------------------------------------------------------------------
+// Catálogo de serviços
+// -----------------------------------------------------------------------
+
+model Service {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  durationMinutes Int
+  price           Decimal  @db.Decimal(10, 2)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+// -----------------------------------------------------------------------
+// Agenda
+// -----------------------------------------------------------------------
+
+model Appointment {
+  id             String              @id @default(uuid())
+  professionalId String
+  professional   User                @relation(fields: [professionalId], references: [id])
+  clientId       String
+  client         Client              @relation(fields: [clientId], references: [id])
+  serviceId      String
+  service        Service             @relation(fields: [serviceId], references: [id])
+
+  startAt  DateTime
+  endAt    DateTime
+  status   AppointmentStatus   @default(SCHEDULED)
+  location AppointmentLocation @default(PRESENCIAL)
+  source   AppointmentSource   @default(WEB)
+
+  googleEventId String? @unique
+
+  notes        String?
+  cancelReason String?
+  confirmedAt  DateTime?
+  reminded24hAt DateTime?
+  reminded1hAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  media ClientMedia[]
+
+  @@index([professionalId, startAt, endAt])
+  @@index([clientId])
+  @@map("appointments")
+}
+
+// -----------------------------------------------------------------------
+// Conversas (WhatsApp e, futuramente, outros canais)
+// -----------------------------------------------------------------------
+
+model Conversation {
+  id            String              @id @default(uuid())
+  clientId      String
+  client        Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  channel       ConversationChannel @default(WHATSAPP)
+  externalId    String // telefone E.164 ou handle do canal
+  state         Json                @default("{}")
+  needsHuman    Boolean             @default(false)
+  lastMessageAt DateTime            @default(now())
+  createdAt     DateTime            @default(now())
+
+  messages Message[]
+
+  @@unique([channel, externalId])
+  @@map("conversations")
+}
+
+model Message {
+  id                String            @id @default(uuid())
+  conversationId    String
+  conversation      Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  direction         MessageDirection
+  type              MessageType       @default(TEXT)
+  content           String?
+  mediaUrl          String?
+  providerMessageId String?           @unique
+  status            MessageStatus     @default(QUEUED)
+  createdAt         DateTime          @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+// -----------------------------------------------------------------------
+// Auditoria
+// -----------------------------------------------------------------------
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  entity    String
+  entityId  String
+  action    AuditAction
+  before    Json?
+  after     Json?
+  reason    String?
+  createdAt DateTime    @default(now())
+
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
