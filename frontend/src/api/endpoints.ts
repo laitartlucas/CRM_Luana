@@ -11,7 +11,7 @@ import type {
 } from './types';
 
 export const AuthApi = {
-  login: (email: string, password: string) => api.post<CurrentUser>('/auth/login', { email, password }),
+  login: (identifier: string, password: string) => api.post<CurrentUser>('/auth/login', { identifier, password }),
   logout: () => api.post('/auth/logout'),
   me: () => api.get<CurrentUser>('/auth/me'),
 };

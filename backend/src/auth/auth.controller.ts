@@ -31,13 +31,14 @@ export class AuthController {
 
   private cookieOptions(maxAgeMs: number) {
     const isProd = this.config.get('NODE_ENV') === 'production';
+    // Frontend e backend rodam em subdomínios distintos em produção
+    // (ex.: Railway), o que o navegador trata como sites diferentes —
+    // 'lax' nunca enviaria o cookie de volta nas chamadas da SPA.
+    const sameSite: 'none' | 'lax' = isProd ? 'none' : 'lax';
     return {
       httpOnly: true,
       secure: isProd,
-      // Frontend e backend rodam em subdomínios distintos em produção
-      // (ex.: Railway), o que o navegador trata como sites diferentes —
-      // 'lax' nunca enviaria o cookie de volta nas chamadas da SPA.
-      sameSite: (isProd ? 'none' : 'lax') as const,
+      sameSite,
       maxAge: maxAgeMs,
       path: '/',
     };

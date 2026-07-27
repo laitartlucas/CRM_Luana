@@ -4,14 +4,14 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash('trocar123', 12);
+  const passwordHash = await bcrypt.hash('Caroline1209', 12);
 
   const admin = await prisma.user.upsert({
-    where: { email: 'consultora@example.com' },
-    update: {},
+    where: { email: 'luana@crm.local' },
+    update: { name: 'Luana', passwordHash },
     create: {
-      name: 'Consultora Principal',
-      email: 'consultora@example.com',
+      name: 'Luana',
+      email: 'luana@crm.local',
       passwordHash,
       role: Role.ADMIN,
       timezone: 'America/Sao_Paulo',
@@ -34,7 +34,7 @@ async function main() {
     }
   }
 
-  console.log('Seed concluído. Usuário admin:', admin.email, '(senha: trocar123)');
+  console.log('Seed concluído. Usuário admin:', admin.name);
 }
 
 main()

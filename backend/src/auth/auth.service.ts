@@ -20,8 +20,12 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+  async validateUser(identifier: string, password: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: identifier }, { name: { equals: identifier, mode: 'insensitive' } }],
+      },
+    });
     if (!user || !user.active || !user.passwordHash) {
       throw new UnauthorizedException('Credenciais inválidas.');
     }

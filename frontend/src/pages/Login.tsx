@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 
 export default function Login() {
   const { user, login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,9 +16,9 @@ export default function Login() {
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
     } catch {
-      setError('E-mail ou senha inválidos.');
+      setError('Usuário ou senha inválidos.');
     } finally {
       setLoading(false);
     }
@@ -29,11 +29,11 @@ export default function Login() {
       <form className="card login-card" onSubmit={handleSubmit}>
         <h1>CRM de Estilo</h1>
         <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-          Entre com seu e-mail e senha.
+          Entre com seu usuário e senha.
         </p>
         <label className="field">
-          E-mail
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          Usuário
+          <input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
         </label>
         <label className="field">
           Senha
