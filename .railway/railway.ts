@@ -10,7 +10,7 @@ export default defineRailway(() => {
   const evolutionCache = redis("evolution-redis");
 
   const evolution = service("evolution", {
-    source: image("evoapicloud/evolution-api:v2.1.1"),
+    source: image("evoapicloud/evolution-api:v2.3.7"),
     env: {
       // Precisa ser o mesmo valor de EVOLUTION_API_KEY no serviço "backend"
       // abaixo — configure os dois manualmente no painel do Railway.

@@ -65,7 +65,7 @@ services:
       retries: 10
 
   evolution-api:
-    image: evoapicloud/evolution-api:v2.1.1
+    image: evoapicloud/evolution-api:v2.3.7
     restart: unless-stopped
     environment:
       # Precisa ser igual a EVOLUTION_API_KEY no backend/.env — é a chave que
