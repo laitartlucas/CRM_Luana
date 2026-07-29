@@ -55,6 +55,13 @@ export default defineRailway(() => {
       EVOLUTION_API_KEY: preserve(),
       EVOLUTION_INSTANCE_NAME: preserve(),
       EVOLUTION_WEBHOOK_SECRET: preserve(),
+      // Proxy residencial/móvel — necessário em produção (IP do Railway é
+      // bloqueado pelo WhatsApp para pareamento por QR, confirmado em teste).
+      EVOLUTION_PROXY_HOST: preserve(),
+      EVOLUTION_PROXY_PORT: preserve(),
+      EVOLUTION_PROXY_PROTOCOL: preserve(),
+      EVOLUTION_PROXY_USERNAME: preserve(),
+      EVOLUTION_PROXY_PASSWORD: preserve(),
       DEFAULT_TIMEZONE: "America/Sao_Paulo",
       LATE_CANCEL_HOURS: "12",
       REMINDER_HOURS_BEFORE: "24,1",

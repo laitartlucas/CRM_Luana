@@ -33,6 +33,44 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
     return { 'Content-Type': 'application/json', apikey: this.apiKey };
   }
 
+  /**
+   * Proxy residencial/móvel opcional — a Evolution API rodando num
+   * datacenter (Railway) tem o IP bloqueado pelo WhatsApp na prática (visto
+   * em teste: handshake fecha a cada poucos segundos, loop de reconexão
+   * infinito). Rotear o tráfego do Baileys por um proxy residencial contorna
+   * isso. Sem essas variáveis configuradas, segue sem proxy (comportamento
+   * anterior).
+   */
+  private get proxyConfig() {
+    const host = this.config.get<string>('EVOLUTION_PROXY_HOST');
+    if (!host) return null;
+    return {
+      host,
+      port: this.config.get<string>('EVOLUTION_PROXY_PORT') ?? '',
+      protocol: this.config.get<string>('EVOLUTION_PROXY_PROTOCOL') ?? 'http',
+      username: this.config.get<string>('EVOLUTION_PROXY_USERNAME') ?? '',
+      password: this.config.get<string>('EVOLUTION_PROXY_PASSWORD') ?? '',
+    };
+  }
+
+  /** Aplica (ou reaplica) a configuração de proxy na instância. Idempotente, seguro de chamar sempre. */
+  private async applyProxy(): Promise<void> {
+    const proxy = this.proxyConfig;
+    if (!proxy) return;
+    const response = await fetch(`${this.baseUrl}/proxy/set/${this.instanceName}`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({ enabled: true, ...proxy }),
+    }).catch((err) => {
+      this.logger.warn(`Falha ao configurar proxy: ${(err as Error).message}`);
+      return null;
+    });
+    if (response && !response.ok) {
+      const data = await response.json().catch(() => ({}));
+      this.logger.warn(`Falha ao configurar proxy: ${JSON.stringify(data)}`);
+    }
+  }
+
   async sendText(to: string, text: string): Promise<SendResult> {
     const number = to.replace(/^\+/, '');
     const response = await fetch(`${this.baseUrl}/message/sendText/${this.instanceName}`, {
@@ -64,6 +102,7 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       webhook: { url: webhookUrl, byEvents: false, base64: true, events: ['MESSAGES_UPSERT'] },
     };
 
+    const proxy = this.proxyConfig;
     const exists = (await this.fetchConnectionStateSafe()) !== null;
     if (!exists) {
       const response = await fetch(`${this.baseUrl}/instance/create`, {
@@ -73,24 +112,35 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
           instanceName: this.instanceName,
           integration: 'WHATSAPP-BAILEYS',
           qrcode: true,
+          ...(proxy
+            ? {
+                proxyHost: proxy.host,
+                proxyPort: proxy.port,
+                proxyProtocol: proxy.protocol,
+                proxyUsername: proxy.username,
+                proxyPassword: proxy.password,
+              }
+            : {}),
           ...webhookConfig,
         }),
       });
-      if (response.ok) return;
-      const data = await response.json().catch(() => ({}));
-      const alreadyExists = /already|em uso|exist/i.test(JSON.stringify(data));
-      if (!alreadyExists) {
-        throw new Error(data?.message ?? 'Falha ao criar instância na Evolution API.');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const alreadyExists = /already|em uso|exist/i.test(JSON.stringify(data));
+        if (!alreadyExists) {
+          throw new Error(data?.message ?? 'Falha ao criar instância na Evolution API.');
+        }
       }
     }
 
     // Instância já existia (ou acabou de ser criada por outra chamada concorrente) —
-    // garante que o webhook está configurado corretamente mesmo assim.
+    // garante que webhook e proxy estão configurados corretamente mesmo assim.
     await fetch(`${this.baseUrl}/webhook/set/${this.instanceName}`, {
       method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(webhookConfig),
     }).catch((err) => this.logger.warn(`Falha ao (re)configurar webhook: ${(err as Error).message}`));
+    await this.applyProxy();
   }
 
   async getQrCode(): Promise<string | null> {
