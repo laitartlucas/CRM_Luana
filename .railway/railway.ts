@@ -65,6 +65,13 @@ export default defineRailway(() => {
       EVOLUTION_PROXY_PROTOCOL: preserve(),
       EVOLUTION_PROXY_USERNAME: preserve(),
       EVOLUTION_PROXY_PASSWORD: preserve(),
+      // Google Calendar — criar credenciais OAuth2 em console.cloud.google.com
+      // (ativar "Google Calendar API"). Redirect URI a cadastrar lá:
+      // https://backend-production-2a762.up.railway.app/calendar-sync/oauth/callback
+      GOOGLE_CALENDAR_CLIENT_ID: preserve(),
+      GOOGLE_CALENDAR_CLIENT_SECRET: preserve(),
+      GOOGLE_CALENDAR_REDIRECT_URI: "https://backend-production-2a762.up.railway.app/calendar-sync/oauth/callback",
+      GOOGLE_CALENDAR_WEBHOOK_URL: "https://backend-production-2a762.up.railway.app/calendar-sync/webhook",
       DEFAULT_TIMEZONE: "America/Sao_Paulo",
       LATE_CANCEL_HOURS: "12",
       REMINDER_HOURS_BEFORE: "24,1",
