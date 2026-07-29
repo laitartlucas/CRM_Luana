@@ -26,6 +26,9 @@ export default defineRailway(() => {
       CACHE_REDIS_ENABLED: "true",
       CACHE_REDIS_URI: evolutionCache.env.REDIS_URL,
       CACHE_REDIS_PREFIX_KEY: "evolution_v2",
+      // Fingerprint mais discreto que o padrão "Evolution API" (não resolveu
+      // sozinho o bloqueio de IP em teste, mas não custa manter).
+      CONFIG_SESSION_PHONE_CLIENT: "Chrome",
     },
   });
 
