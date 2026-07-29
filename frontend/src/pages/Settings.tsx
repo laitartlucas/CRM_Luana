@@ -17,6 +17,7 @@ export default function Settings() {
   const [evoStatus, setEvoStatus] = useState<{ connected: boolean; state: string } | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [evoLoading, setEvoLoading] = useState(false);
+  const [evoError, setEvoError] = useState<string | null>(null);
 
   function loadHealth() {
     if (!professional) return;
@@ -36,15 +37,26 @@ export default function Settings() {
 
   useEffect(() => {
     loadEvoStatus();
-    const interval = setInterval(loadEvoStatus, 5000);
+    // Intervalo mais alto de propósito: checar status com muita frequência
+    // pareceu retroalimentar o loop de reconexão da Evolution API durante os
+    // testes (a conexão reiniciava sozinha a cada poucos segundos).
+    const interval = setInterval(loadEvoStatus, 20000);
     return () => clearInterval(interval);
   }, []);
 
   async function handleEvolutionConnect() {
+    if (evoLoading) return; // evita clique duplo disparando reconexões extras na Evolution API
     setEvoLoading(true);
+    setEvoError(null);
     try {
       const res = await WhatsappApi.evolutionConnect();
-      setQrCode(res.data.qrCodeBase64);
+      if (res.data.qrCodeBase64) {
+        setQrCode(res.data.qrCodeBase64);
+      } else {
+        setEvoError('A Evolution API não retornou um QR Code desta vez. Aguarde alguns segundos e tente de novo.');
+      }
+    } catch (err: any) {
+      setEvoError(err?.response?.data?.message ?? 'Falha ao conectar com a Evolution API.');
     } finally {
       setEvoLoading(false);
     }
@@ -101,6 +113,7 @@ export default function Settings() {
             <button className="btn" onClick={handleEvolutionConnect} disabled={evoLoading}>
               {evoLoading ? 'Gerando QR Code...' : 'Conectar'}
             </button>
+            {evoError && <p className="error-text">{evoError}</p>}
             {qrCode && (
               <div style={{ marginTop: '1rem' }}>
                 <img

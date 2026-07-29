@@ -98,6 +98,9 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       headers: this.headers(),
     });
     const data = await response.json().catch(() => ({}));
+    // TODO(diagnóstico temporário): remover depois de confirmar o formato
+    // real da resposta da Evolution API nesta versão.
+    this.logger.warn(`getQrCode() resposta bruta: ${JSON.stringify(data)}`);
     return data?.base64 ?? data?.qrcode?.base64 ?? null;
   }
 
@@ -114,6 +117,9 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       if (response.status === 404) return null; // instância ainda não existe na Evolution API
       if (!response.ok) return 'close';
       const data = await response.json().catch(() => ({}));
+      // TODO(diagnóstico temporário): remover depois de confirmar o formato
+      // real da resposta da Evolution API nesta versão.
+      this.logger.warn(`connectionState() resposta bruta: ${JSON.stringify(data)}`);
       return data?.instance?.state ?? 'close';
     } catch (err) {
       // Evolution API fora do ar/não configurada — não deixa o polling de
