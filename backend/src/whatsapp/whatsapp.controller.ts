@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Inject,
   Logger,
+  Param,
   Post,
   Query,
   Req,
@@ -20,6 +21,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { ConversationEngineService } from './conversation/conversation-engine.service';
 import { WHATSAPP_PROVIDER, WhatsappProvider } from './providers/whatsapp-provider.interface';
+import { EvolutionWhatsappProvider } from './providers/evolution-whatsapp.provider';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { SimulateInboundDto } from './dto/simulate-inbound.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,6 +34,7 @@ export class WhatsappController {
     private readonly config: ConfigService,
     private readonly conversationEngine: ConversationEngineService,
     @Inject(WHATSAPP_PROVIDER) private readonly provider: WhatsappProvider,
+    private readonly evolutionProvider: EvolutionWhatsappProvider,
     private readonly storage: LocalStorageService,
     private readonly prisma: PrismaService,
   ) {}
@@ -77,6 +80,60 @@ export class WhatsappController {
     return { ok: true };
   }
 
+  /**
+   * Webhook da Evolution API (conexão por QR Code, ver
+   * evolution-whatsapp.provider.ts). Diferente da Meta, a Evolution não
+   * assina o corpo com HMAC — o segredo no path da URL é o que protege esta
+   * rota (comparado em tempo constante).
+   */
+  @Public()
+  @Post('webhook/evolution/:secret')
+  @HttpCode(HttpStatus.OK)
+  async receiveEvolutionWebhook(@Param('secret') secret: string, @Body() body: any) {
+    const expected = this.config.get<string>('EVOLUTION_WEBHOOK_SECRET');
+    if (!expected || !this.safeCompare(secret, expected)) {
+      this.logger.warn('Segredo do webhook da Evolution API inválido — ignorando payload.');
+      return { ok: true };
+    }
+
+    try {
+      await this.processEvolutionWebhookPayload(body);
+    } catch (err) {
+      this.logger.error(`Erro ao processar webhook da Evolution API: ${(err as Error).message}`);
+    }
+    return { ok: true };
+  }
+
+  /** Status de conexão da instância da Evolution API (usado pela tela de Configurações). */
+  @UseGuards(RolesGuard)
+  @Get('evolution/status')
+  async evolutionStatus() {
+    const state = await this.evolutionProvider.getConnectionState();
+    return { connected: state === 'open', state };
+  }
+
+  /** Garante a instância criada + webhook configurado e devolve o QR Code pra escanear. */
+  @UseGuards(RolesGuard)
+  @Post('evolution/connect')
+  async evolutionConnect() {
+    const secret = this.config.get<string>('EVOLUTION_WEBHOOK_SECRET');
+    const publicUrl = this.config.get<string>('API_PUBLIC_URL');
+    if (!secret || !publicUrl) {
+      throw new BadRequestException('EVOLUTION_WEBHOOK_SECRET e API_PUBLIC_URL precisam estar configurados.');
+    }
+    const webhookUrl = `${publicUrl}/whatsapp/webhook/evolution/${secret}`;
+    await this.evolutionProvider.ensureInstance(webhookUrl);
+    const qrCodeBase64 = await this.evolutionProvider.getQrCode();
+    return { qrCodeBase64 };
+  }
+
+  private safeCompare(a: string, b: string): boolean {
+    const bufA = Buffer.from(a);
+    const bufB = Buffer.from(b);
+    if (bufA.length !== bufB.length) return false;
+    return timingSafeEqual(bufA, bufB);
+  }
+
   private verifySignature(rawBody: Buffer, signatureHeader: string, appSecret: string): boolean {
     if (!signatureHeader?.startsWith('sha256=')) return false;
     const expected = createHmac('sha256', appSecret).update(rawBody).digest('hex');
@@ -113,6 +170,44 @@ export class WhatsappController {
         });
       }
     }
+  }
+
+  /**
+   * Evento `messages.upsert` da Evolution API. Formato de payload difere da
+   * Meta (mensagem única em `data`, não um array em `entry[].changes[]`), e
+   * a mídia já vem embutida em base64 no próprio payload (instância criada
+   * com `webhook.base64=true`, ver ensureInstance), sem precisar de uma
+   * segunda chamada pra baixar como no fluxo da Meta.
+   */
+  private async processEvolutionWebhookPayload(body: any) {
+    if (body?.event !== 'messages.upsert') return;
+    const data = body?.data;
+    const key = data?.key;
+    if (!data || !key) return;
+    if (key.fromMe) return; // mensagem enviada pelo próprio número conectado (app normal do celular)
+    const remoteJid: string | undefined = key.remoteJid;
+    if (!remoteJid || remoteJid.endsWith('@g.us')) return; // ignora mensagens de grupo
+
+    const phoneE164 = `+${remoteJid.split('@')[0]}`;
+    const message = data.message ?? {};
+    let text: string | undefined = message.conversation ?? message.extendedTextMessage?.text;
+    let mediaSavedUrl: string | undefined;
+
+    const image = message.imageMessage;
+    if (image?.base64) {
+      const buffer = Buffer.from(image.base64, 'base64');
+      const mimeType: string = image.mimetype ?? 'image/jpeg';
+      const extension = mimeType.split('/')[1] ?? 'jpg';
+      mediaSavedUrl = await this.storage.save('whatsapp-media', `${key.id}.${extension}`, buffer);
+      text = image.caption ?? text;
+    }
+
+    await this.conversationEngine.handleIncoming({
+      phoneE164,
+      providerMessageId: key.id ?? `evo-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      text,
+      mediaSavedUrl,
+    });
   }
 
   /**

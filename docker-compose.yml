@@ -38,6 +38,7 @@ services:
       DATABASE_URL: postgresql://crm:crm@postgres:5432/crm_styling?schema=public
       REDIS_HOST: redis
       REDIS_PORT: '6379'
+      EVOLUTION_API_URL: http://evolution-api:8080
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,6 +48,51 @@ services:
       - '3000:3000'
     volumes:
       - uploads-data:/app/uploads
+
+  evolution-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U evolution']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  evolution-api:
+    image: evoapicloud/evolution-api:v2.1.1
+    restart: unless-stopped
+    environment:
+      # Precisa ser igual a EVOLUTION_API_KEY no backend/.env — é a chave que
+      # o backend manda no header `apikey` em toda chamada.
+      AUTHENTICATION_API_KEY: '45f51035509686d2e6e573477a99367e52f07c167013dd6c'
+      DATABASE_ENABLED: 'true'
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@evolution-postgres:5432/evolution
+      DATABASE_SAVE_DATA_INSTANCE: 'true'
+      DATABASE_SAVE_DATA_NEW_MESSAGE: 'true'
+      DATABASE_SAVE_MESSAGE_UPDATE: 'true'
+      DATABASE_SAVE_DATA_CONTACTS: 'true'
+      DATABASE_SAVE_DATA_CHATS: 'true'
+      # Reaproveita o Redis do CRM, mas em índice/prefixo próprio pra não
+      # colidir com as filas BullMQ do backend.
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://redis:6379/1
+      CACHE_REDIS_PREFIX_KEY: evolution_v2
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '8080:8080'
+    volumes:
+      - evolution-instances:/evolution/instances
 
   frontend:
     build:
@@ -63,3 +109,5 @@ volumes:
   postgres-data:
   redis-data:
   uploads-data:
+  evolution-postgres-data:
+  evolution-instances:

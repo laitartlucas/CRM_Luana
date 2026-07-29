@@ -20,7 +20,17 @@ reais". Pode rodar em paralelo à Fase 1:
    telefone no WhatsApp Cloud API, criar templates de mensagem (lembrete,
    confirmação) para aprovação da Meta — **isso costuma levar de alguns dias
    a 1-2 semanas** pela revisão de templates, então deve ser iniciado o
-   quanto antes.
+   quanto antes. Importante: a Cloud API exige migrar o número pra fora do
+   WhatsApp normal/Business App do celular — não dá pra usar o mesmo número
+   nos dois ao mesmo tempo.
+   - **Alternativa adotada neste projeto**: `WHATSAPP_PROVIDER=evolution`
+     (Evolution API, self-hosted, protocolo WhatsApp Web/Baileys, conexão por
+     QR Code) permite manter o número já usado no celular, sem esperar
+     aprovação da Meta. Não é o transporte oficial — fora dos Termos de Uso
+     do WhatsApp, risco baixo mas real de banimento do número; decisão
+     consciente do negócio, documentada em `README.md`. `MetaWhatsappProvider`
+     continua implementado e pronto caso decidam migrar para o caminho
+     oficial no futuro (provider pattern, ver `docs/01-arquitetura.md` §1.3).
 
 ## Fase 1 — MVP (entregue nesta etapa)
 

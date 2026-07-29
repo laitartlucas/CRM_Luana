@@ -14,12 +14,41 @@ export default function Settings() {
   const [simText, setSimText] = useState('1');
   const [simLog, setSimLog] = useState<any[]>([]);
 
+  const [evoStatus, setEvoStatus] = useState<{ connected: boolean; state: string } | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [evoLoading, setEvoLoading] = useState(false);
+
   function loadHealth() {
     if (!professional) return;
     CalendarSyncApi.health(professional.id).then((res) => setHealth(res.data));
   }
 
   useEffect(loadHealth, [professional]);
+
+  function loadEvoStatus() {
+    WhatsappApi.evolutionStatus()
+      .then((res) => {
+        setEvoStatus(res.data);
+        if (res.data.connected) setQrCode(null);
+      })
+      .catch(() => setEvoStatus(null));
+  }
+
+  useEffect(() => {
+    loadEvoStatus();
+    const interval = setInterval(loadEvoStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleEvolutionConnect() {
+    setEvoLoading(true);
+    try {
+      const res = await WhatsappApi.evolutionConnect();
+      setQrCode(res.data.qrCodeBase64);
+    } finally {
+      setEvoLoading(false);
+    }
+  }
 
   async function handleSimulate() {
     const res = await WhatsappApi.simulateInbound(simPhone, simText);
@@ -52,6 +81,40 @@ export default function Settings() {
         <a className="btn" href={CalendarSyncApi.connectUrl()}>
           {health?.connected ? 'Reconectar' : 'Conectar Google Calendar'}
         </a>
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.25rem' }}>
+        <h3 style={{ marginTop: 0 }}>WhatsApp — conectar por QR Code</h3>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+          Conecta o número de WhatsApp que você já usa no celular (via Evolution API), sem precisar
+          migrar pra Meta Cloud API.
+        </p>
+        {evoStatus?.connected ? (
+          <p>
+            Status: <strong style={{ color: 'var(--color-success)' }}>Conectado</strong>
+          </p>
+        ) : (
+          <>
+            <p>
+              Status: <strong>Desconectado</strong>
+            </p>
+            <button className="btn" onClick={handleEvolutionConnect} disabled={evoLoading}>
+              {evoLoading ? 'Gerando QR Code...' : 'Conectar'}
+            </button>
+            {qrCode && (
+              <div style={{ marginTop: '1rem' }}>
+                <img
+                  src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
+                  alt="QR Code do WhatsApp"
+                  style={{ maxWidth: 260 }}
+                />
+                <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                  Abra o WhatsApp no celular → Aparelhos conectados → Conectar um aparelho, e escaneie.
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="card">

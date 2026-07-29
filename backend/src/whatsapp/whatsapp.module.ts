@@ -8,6 +8,7 @@ import { WHATSAPP_SEND_QUEUE } from './send-queue/queue.constants';
 import { WHATSAPP_PROVIDER } from './providers/whatsapp-provider.interface';
 import { MockWhatsappProvider } from './providers/mock-whatsapp.provider';
 import { MetaWhatsappProvider } from './providers/meta-whatsapp.provider';
+import { EvolutionWhatsappProvider } from './providers/evolution-whatsapp.provider';
 import { ConversationEngineService } from './conversation/conversation-engine.service';
 import { ClientsModule } from '../clients/clients.module';
 import { CatalogModule } from '../catalog/catalog.module';
@@ -27,12 +28,22 @@ import { AppointmentsModule } from '../appointments/appointments.module';
     ConversationEngineService,
     {
       provide: WHATSAPP_PROVIDER,
-      useFactory: (config: ConfigService, metaProvider: MetaWhatsappProvider, mockProvider: MockWhatsappProvider) =>
-        config.get<string>('WHATSAPP_PROVIDER') === 'meta' ? metaProvider : mockProvider,
-      inject: [ConfigService, MetaWhatsappProvider, MockWhatsappProvider],
+      useFactory: (
+        config: ConfigService,
+        metaProvider: MetaWhatsappProvider,
+        mockProvider: MockWhatsappProvider,
+        evolutionProvider: EvolutionWhatsappProvider,
+      ) => {
+        const provider = config.get<string>('WHATSAPP_PROVIDER');
+        if (provider === 'meta') return metaProvider;
+        if (provider === 'evolution') return evolutionProvider;
+        return mockProvider;
+      },
+      inject: [ConfigService, MetaWhatsappProvider, MockWhatsappProvider, EvolutionWhatsappProvider],
     },
     MetaWhatsappProvider,
     MockWhatsappProvider,
+    EvolutionWhatsappProvider,
   ],
   exports: [WhatsappOutboundService],
 })

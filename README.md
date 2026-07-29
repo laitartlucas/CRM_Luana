@@ -105,6 +105,25 @@ Quando a conta Meta Business estiver aprovada (ver
 `WHATSAPP_META_*` no `.env` e mudar `WHATSAPP_PROVIDER=meta` — nenhum outro
 código muda (provider pattern, ver `docs/01-arquitetura.md` §1.3).
 
+### Alternativa: WhatsApp real sem Meta Business (Evolution API / QR Code)
+
+A Meta Cloud API exige migrar o número pra fora do WhatsApp normal/Business
+App do celular. Se isso não é viável (quer manter o número que já usa), o
+sistema também suporta `WHATSAPP_PROVIDER=evolution`, que conecta via
+[Evolution API](https://github.com/EvolutionAPI/evolution-api) (self-hosted,
+protocolo WhatsApp Web/Baileys, conexão por QR Code — **não é o transporte
+oficial da Meta**, fica fora dos Termos de Uso do WhatsApp, com risco baixo
+mas real de banimento do número).
+
+1. `docker-compose up` já sobe o serviço `evolution-api` (+ seu próprio
+   Postgres) junto com o resto do sistema.
+2. Preencha `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE_NAME`
+   e `EVOLUTION_WEBHOOK_SECRET` no `.env` do backend (ver `.env.example`) e
+   mude `WHATSAPP_PROVIDER=evolution`.
+3. Na UI, vá em **Configurações → WhatsApp — conectar por QR Code**, clique em
+   "Conectar", e escaneie o QR Code pelo celular (WhatsApp → Aparelhos
+   conectados → Conectar um aparelho).
+
 ## Conectando o Google Calendar
 
 1. Crie um projeto em https://console.cloud.google.com, ative a **Google

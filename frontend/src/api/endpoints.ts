@@ -89,4 +89,6 @@ export const CalendarSyncApi = {
 export const WhatsappApi = {
   simulateInbound: (phoneE164: string, text: string) =>
     api.post('/whatsapp/simulate/inbound', { phoneE164, text }),
+  evolutionStatus: () => api.get<{ connected: boolean; state: string }>('/whatsapp/evolution/status'),
+  evolutionConnect: () => api.post<{ qrCodeBase64: string | null }>('/whatsapp/evolution/connect'),
 };
