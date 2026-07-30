@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -12,21 +11,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
-  // Tráfego real do app passa por 2 saltos até aqui: edge do Railway
-  // (client -> edge) + proxy nginx do frontend (edge -> nginx -> aqui, via
-  // rede privada). Um número errado de saltos faz o Express extrair um IP
-  // diferente a cada request (às vezes o do próprio proxy), quebrando o
-  // rate limit por IP do login — cada tentativa "parecia" vir de um
-  // cliente novo.
-  app.getHttpAdapter().getInstance().set('trust proxy', 2);
-  // DEBUG TEMPORÁRIO — remover depois de diagnosticar o rate limit.
-  app.use((req: Request, _res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/auth/')) {
-      // eslint-disable-next-line no-console
-      console.log('DEBUG_IP', JSON.stringify({ xff: req.headers['x-forwarded-for'], ip: req.ip, ips: (req as any).ips }));
-    }
-    next();
-  });
+  // X-Forwarded-For real observado em produção: "<client>, <edge-railway>,
+  // <relay-interno>" + a própria conexão TCP direta (nginx do frontend)
+  // como um salto implícito adicional — total de 3 saltos confiáveis até
+  // chegar no IP real do cliente. Os dois saltos intermediários mudam a
+  // cada request (edge/relay são dinâmicos), então um número errado aqui
+  // fazia o Express "ver" um cliente diferente a cada tentativa de login,
+  // quebrando o rate limit por IP.
+  app.getHttpAdapter().getInstance().set('trust proxy', 3);
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
