@@ -11,10 +11,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
 
-  // Backend só é alcançado atrás de proxy (nginx do frontend e/ou edge do
-  // Railway) — sem isso, req.ip vira o IP do proxy pra todo mundo e o
-  // rate limit do login passa a valer por proxy, não por cliente real.
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  // Tráfego real do app passa por 2 saltos até aqui: edge do Railway
+  // (client -> edge) + proxy nginx do frontend (edge -> nginx -> aqui, via
+  // rede privada). Um número errado de saltos faz o Express extrair um IP
+  // diferente a cada request (às vezes o do próprio proxy), quebrando o
+  // rate limit por IP do login — cada tentativa "parecia" vir de um
+  // cliente novo.
+  app.getHttpAdapter().getInstance().set('trust proxy', 2);
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
