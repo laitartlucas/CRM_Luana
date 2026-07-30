@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -18,6 +19,14 @@ async function bootstrap() {
   // rate limit por IP do login — cada tentativa "parecia" vir de um
   // cliente novo.
   app.getHttpAdapter().getInstance().set('trust proxy', 2);
+  // DEBUG TEMPORÁRIO — remover depois de diagnosticar o rate limit.
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/auth/')) {
+      // eslint-disable-next-line no-console
+      console.log('DEBUG_IP', JSON.stringify({ xff: req.headers['x-forwarded-for'], ip: req.ip, ips: (req as any).ips }));
+    }
+    next();
+  });
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
