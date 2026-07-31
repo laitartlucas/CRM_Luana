@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AppointmentStatus, ScheduleBlockType } from '@prisma/client';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { CreateBlockDto } from './dto/create-block.dto';
@@ -229,8 +230,12 @@ export class AppointmentsService {
     daysAhead?: number;
     limit?: number;
   }) {
-    const service = await this.prisma.service.findUnique({ where: { id: params.serviceId } });
+    const [service, professional] = await Promise.all([
+      this.prisma.service.findUnique({ where: { id: params.serviceId } }),
+      this.prisma.user.findUnique({ where: { id: params.professionalId }, select: { timezone: true } }),
+    ]);
     if (!service) throw new NotFoundException('Serviço não encontrado.');
+    const tz = professional?.timezone ?? 'America/Sao_Paulo';
 
     const daysAhead = params.daysAhead ?? 14;
     const limit = params.limit ?? 5;
@@ -267,12 +272,17 @@ export class AppointmentsService {
     const durationMs = service.durationMinutes * 60_000;
     const stepMs = SLOT_STEP_MINUTES * 60_000;
 
+    // Horário comercial é sempre "hora de parede" no fuso do profissional —
+    // calcular em UTC (ou no fuso do processo) deslocaria o expediente real
+    // (ex.: 9h–19h em São Paulo virando 6h–16h se o servidor rodar em UTC).
+    const zonedRangeStart = toZonedTime(rangeStart, tz);
+
     for (let day = 0; day < daysAhead && slots.length < limit; day++) {
-      const dayStart = new Date(rangeStart);
-      dayStart.setDate(dayStart.getDate() + day);
-      dayStart.setHours(BUSINESS_HOURS.startHour, 0, 0, 0);
-      const dayEnd = new Date(dayStart);
-      dayEnd.setHours(BUSINESS_HOURS.endHour, 0, 0, 0);
+      const y = zonedRangeStart.getFullYear();
+      const m = zonedRangeStart.getMonth();
+      const d = zonedRangeStart.getDate() + day;
+      const dayStart = fromZonedTime(new Date(y, m, d, BUSINESS_HOURS.startHour, 0, 0, 0), tz);
+      const dayEnd = fromZonedTime(new Date(y, m, d, BUSINESS_HOURS.endHour, 0, 0, 0), tz);
 
       const isFullDayBlocked = blocks.some(
         (b) =>

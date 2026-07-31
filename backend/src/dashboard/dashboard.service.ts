@@ -1,27 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { AppointmentStatus } from '@prisma/client';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUSINESS_HOURS } from '../appointments/business-hours.const';
-
-function startOfDay(date: Date) {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function endOfDay(date: Date) {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
-  return d;
-}
 
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** "Hoje"/"este mês" precisam ser calculados na hora de parede do fuso do
+   *  profissional — em UTC, o dia viraria horas antes/depois do real. */
+  private async resolveTimezone(professionalId?: string): Promise<string> {
+    const user = professionalId
+      ? await this.prisma.user.findUnique({ where: { id: professionalId }, select: { timezone: true } })
+      : await this.prisma.user.findFirst({ select: { timezone: true } });
+    return user?.timezone ?? 'America/Sao_Paulo';
+  }
+
   async getToday(professionalId?: string) {
-    const from = startOfDay(new Date());
-    const to = endOfDay(new Date());
+    const tz = await this.resolveTimezone(professionalId);
+    const zonedNow = toZonedTime(new Date(), tz);
+    const y = zonedNow.getFullYear();
+    const m = zonedNow.getMonth();
+    const d = zonedNow.getDate();
+    const from = fromZonedTime(new Date(y, m, d, 0, 0, 0, 0), tz);
+    const to = fromZonedTime(new Date(y, m, d, 23, 59, 59, 999), tz);
     return this.prisma.appointment.findMany({
       where: {
         professionalId,
@@ -33,8 +36,18 @@ export class DashboardService {
     });
   }
 
-  async getKpis(params: { professionalId?: string; from: Date; to: Date }) {
-    const { professionalId, from, to } = params;
+  async getKpis(params: { professionalId?: string; from?: Date; to?: Date }) {
+    const { professionalId } = params;
+    const tz = await this.resolveTimezone(professionalId);
+
+    let { from, to } = params;
+    if (!from || !to) {
+      const zonedNow = toZonedTime(new Date(), tz);
+      const y = zonedNow.getFullYear();
+      const m = zonedNow.getMonth();
+      from ??= fromZonedTime(new Date(y, m, 1, 0, 0, 0, 0), tz);
+      to ??= fromZonedTime(new Date(y, m + 1, 0, 23, 59, 59, 999), tz);
+    }
 
     const appointments = await this.prisma.appointment.findMany({
       where: { professionalId, startAt: { gte: from, lte: to } },
