@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { SendResult, WhatsappProvider } from './whatsapp-provider.interface';
 
 type ConnectionState = 'open' | 'connecting' | 'close';
@@ -45,7 +46,7 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       this.logger.error(`Falha ao enviar mensagem: ${JSON.stringify(data)}`);
       throw new Error(data?.message ?? 'Falha ao enviar mensagem via Evolution API.');
     }
-    return { providerMessageId: data?.key?.id ?? 'unknown' };
+    return { providerMessageId: data?.key?.id ?? randomUUID() };
   }
 
   /**
@@ -98,9 +99,6 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       headers: this.headers(),
     });
     const data = await response.json().catch(() => ({}));
-    // TODO(diagnóstico temporário): remover depois de confirmar o formato
-    // real da resposta da Evolution API nesta versão.
-    this.logger.warn(`getQrCode() resposta bruta: ${JSON.stringify(data)}`);
     return data?.base64 ?? data?.qrcode?.base64 ?? null;
   }
 
@@ -117,9 +115,6 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       if (response.status === 404) return null; // instância ainda não existe na Evolution API
       if (!response.ok) return 'close';
       const data = await response.json().catch(() => ({}));
-      // TODO(diagnóstico temporário): remover depois de confirmar o formato
-      // real da resposta da Evolution API nesta versão.
-      this.logger.warn(`connectionState() resposta bruta: ${JSON.stringify(data)}`);
       return data?.instance?.state ?? 'close';
     } catch (err) {
       // Evolution API fora do ar/não configurada — não deixa o polling de
