@@ -31,6 +31,10 @@ export function AppointmentFormModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [manualEntry, setManualEntry] = useState(false);
+  const [manualDate, setManualDate] = useState('');
+  const [manualTime, setManualTime] = useState('');
+
   useEffect(() => {
     CatalogApi.list().then((res) => setServices(res.data));
   }, []);
@@ -47,7 +51,7 @@ export function AppointmentFormModal({
   }, [clientSearch]);
 
   useEffect(() => {
-    if (!serviceId) return;
+    if (!serviceId || manualEntry) return;
     setLoadingSlots(true);
     setSelectedSlot(null);
     AppointmentsApi.availableSlots({
@@ -57,7 +61,26 @@ export function AppointmentFormModal({
     })
       .then((res) => setSlots(res.data))
       .finally(() => setLoadingSlots(false));
-  }, [serviceId, professionalId, initialDate]);
+  }, [serviceId, professionalId, initialDate, manualEntry]);
+
+  useEffect(() => {
+    if (!manualEntry) return;
+    if (!manualDate || !manualTime) {
+      setSelectedSlot(null);
+      return;
+    }
+    const parsed = new Date(`${manualDate}T${manualTime}`);
+    setSelectedSlot(Number.isNaN(parsed.getTime()) ? null : parsed.toISOString());
+  }, [manualEntry, manualDate, manualTime]);
+
+  function toggleManualEntry(next: boolean) {
+    setManualEntry(next);
+    setSelectedSlot(null);
+    if (!next) {
+      setManualDate('');
+      setManualTime('');
+    }
+  }
 
   async function handleSubmit() {
     setError(null);
@@ -160,20 +183,35 @@ export function AppointmentFormModal({
 
       {serviceId && (
         <div className="field">
-          Horário
-          {loadingSlots && <span>Buscando horários...</span>}
-          {!loadingSlots && slots.length === 0 && <span>Nenhum horário livre encontrado.</span>}
-          <div className="slot-options">
-            {slots.map((iso) => (
-              <button
-                key={iso}
-                className={`slot-option ${selectedSlot === iso ? 'selected' : ''}`}
-                onClick={() => setSelectedSlot(iso)}
-              >
-                {new Date(iso).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-              </button>
-            ))}
+          <div className="appointment-row">
+            <span>Horário</span>
+            <button className="btn-link" onClick={() => toggleManualEntry(!manualEntry)}>
+              {manualEntry ? 'ver horários sugeridos' : 'digitar data e horário manualmente'}
+            </button>
           </div>
+
+          {manualEntry ? (
+            <div className="form-grid">
+              <input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} />
+              <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} />
+            </div>
+          ) : (
+            <>
+              {loadingSlots && <span>Buscando horários...</span>}
+              {!loadingSlots && slots.length === 0 && <span>Nenhum horário livre encontrado nos próximos dias.</span>}
+              <div className="slot-options">
+                {slots.map((iso) => (
+                  <button
+                    key={iso}
+                    className={`slot-option ${selectedSlot === iso ? 'selected' : ''}`}
+                    onClick={() => setSelectedSlot(iso)}
+                  >
+                    {new Date(iso).toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

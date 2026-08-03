@@ -17,8 +17,15 @@ export default function Login() {
     setLoading(true);
     try {
       await login(identifier, password);
-    } catch {
-      setError('Usuário ou senha inválidos.');
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 429) {
+        setError('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+      } else if (status === 401) {
+        setError('Usuário ou senha inválidos.');
+      } else {
+        setError('Não foi possível entrar agora. Verifique sua conexão e tente novamente.');
+      }
     } finally {
       setLoading(false);
     }

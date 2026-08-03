@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEmail,
+  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPhoneNumber,
@@ -11,6 +12,7 @@ import {
 
 export class CreateClientDto {
   @IsString()
+  @IsNotEmpty({ message: 'Nome é obrigatório.' })
   name!: string;
 
   @IsPhoneNumber(undefined, { message: 'Telefone deve estar em formato internacional, ex.: +5511999999999' })

@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
@@ -49,6 +50,8 @@ export class AuthController {
     res.cookie(REFRESH_COOKIE, tokens.refreshToken, this.cookieOptions(7 * 24 * 60 * 60 * 1000));
   }
 
+  // Brute-force: 5 tentativas por minuto por IP, bem abaixo do limite geral.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Public()
   @UseGuards(LocalAuthGuard)
   @Post('login')
@@ -60,6 +63,7 @@ export class AuthController {
     return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)

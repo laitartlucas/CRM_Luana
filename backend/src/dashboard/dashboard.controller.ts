@@ -16,13 +16,10 @@ export class DashboardController {
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    const now = new Date();
-    const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
-    const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     return this.dashboardService.getKpis({
       professionalId,
-      from: from ? new Date(from) : defaultFrom,
-      to: to ? new Date(to) : defaultTo,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
     });
   }
 }

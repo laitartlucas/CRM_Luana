@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { SendResult, WhatsappProvider } from './whatsapp-provider.interface';
 
 type ConnectionState = 'open' | 'connecting' | 'close';
@@ -83,7 +84,7 @@ export class EvolutionWhatsappProvider implements WhatsappProvider {
       this.logger.error(`Falha ao enviar mensagem: ${JSON.stringify(data)}`);
       throw new Error(data?.message ?? 'Falha ao enviar mensagem via Evolution API.');
     }
-    return { providerMessageId: data?.key?.id ?? 'unknown' };
+    return { providerMessageId: data?.key?.id ?? randomUUID() };
   }
 
   /**
