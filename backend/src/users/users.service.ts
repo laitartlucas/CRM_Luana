@@ -68,4 +68,20 @@ export class UsersService {
       orderBy: { name: 'asc' },
     });
   }
+
+  /**
+   * MVP: negócio de 1 consultora principal — os fluxos que precisam de um
+   * profissional "dono" da ação (motor de conversa do WhatsApp, criação de
+   * call comercial pelo Pipeline) usam a primeira profissional ativa. Ver
+   * docs/04-plano-implementacao.md Fase 3 para o caminho de evolução
+   * multi-profissional.
+   */
+  async getDefaultProfessional() {
+    const professional = await this.prisma.user.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!professional) throw new NotFoundException('Nenhum profissional cadastrado no sistema.');
+    return professional;
+  }
 }

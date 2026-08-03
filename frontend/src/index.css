@@ -269,3 +269,80 @@ tr:hover td { background: #fbf7f4; }
   border-color: var(--color-primary);
   background: #f6ede7;
 }
+
+/* Kanban (Pipeline Comercial / Sucesso do Cliente) */
+.kanban-board {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.kanban-column {
+  background: #f3ece5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  min-width: 240px;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 220px);
+}
+.kanban-column.over {
+  border-color: var(--color-primary);
+  background: #f6ede7;
+}
+.kanban-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  border-bottom: 1px solid var(--color-border);
+}
+.kanban-column-count {
+  background: var(--color-surface);
+  border-radius: 99px;
+  padding: 0.05rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+.kanban-column-body {
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+}
+.kanban-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: grab;
+  touch-action: none;
+}
+.kanban-card strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.kanban-card .kanban-card-meta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+.score-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.05rem 0.4rem;
+  border-radius: 99px;
+  background: #eef0f6;
+  color: #4a5590;
+}
+.score-badge.high { background: #e6f2e8; color: var(--color-success); }
+.score-badge.risk { background: #fbe4d8; color: #a65221; }

@@ -20,6 +20,10 @@ import { CalendarSyncModule } from './calendar-sync/calendar-sync.module';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { LeadsModule } from './leads/leads.module';
+import { PipelineModule } from './pipeline/pipeline.module';
+import { IntakeModule } from './intake/intake.module';
+import { ClientSuccessModule } from './client-success/client-success.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
@@ -59,6 +63,10 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     WhatsappModule,
     NotificationsModule,
     DashboardModule,
+    LeadsModule,
+    PipelineModule,
+    IntakeModule,
+    ClientSuccessModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

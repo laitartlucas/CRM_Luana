@@ -1,7 +1,8 @@
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClientsApi } from '../api/endpoints';
-import type { Appointment, Client, ClientMedia } from '../api/types';
+import { ClientsApi, ClientSuccessApi } from '../api/endpoints';
+import type { Appointment, Client, ClientMedia, SuccessStage } from '../api/types';
+import { SUCCESS_STAGE_LABELS, SUCCESS_STAGE_ORDER } from '../constants/pipelineLabels';
 
 const STYLE_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'bodyType', label: 'Tipo de corpo' },
@@ -18,6 +19,8 @@ export default function ClientDetail() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [media, setMedia] = useState<ClientMedia[]>([]);
   const [saving, setSaving] = useState(false);
+  const [changingStage, setChangingStage] = useState(false);
+  const [intakeLink, setIntakeLink] = useState<string | null>(null);
 
   function load() {
     if (!id) return;
@@ -60,6 +63,23 @@ export default function ClientDetail() {
     e.target.value = '';
   }
 
+  async function handleSuccessStage(toStage: SuccessStage) {
+    if (!id) return;
+    setChangingStage(true);
+    try {
+      await ClientSuccessApi.changeStage(id, { toStage });
+      load();
+    } finally {
+      setChangingStage(false);
+    }
+  }
+
+  async function handleGetIntakeLink() {
+    if (!id) return;
+    const res = await ClientSuccessApi.intakeLink(id);
+    setIntakeLink(res.data.url);
+  }
+
   if (!client) return <p>Carregando...</p>;
 
   return (
@@ -94,6 +114,27 @@ export default function ClientDetail() {
               {saving ? 'Salvando...' : 'Salvar ficha'}
             </button>
           </div>
+
+          <h3>Sucesso do Cliente</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
+            {SUCCESS_STAGE_ORDER.map((stage) => (
+              <button
+                key={stage}
+                className={`btn ${client.successStage === stage ? '' : 'secondary'}`}
+                disabled={changingStage}
+                style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
+                onClick={() => handleSuccessStage(stage)}
+              >
+                {SUCCESS_STAGE_LABELS[stage]}
+              </button>
+            ))}
+          </div>
+          <button className="btn secondary" onClick={handleGetIntakeLink} style={{ marginBottom: '0.5rem' }}>
+            Gerar link do formulário de intake
+          </button>
+          {intakeLink && (
+            <input readOnly value={intakeLink} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
+          )}
 
           <h3>LGPD</h3>
           <p style={{ fontSize: '0.85rem' }}>

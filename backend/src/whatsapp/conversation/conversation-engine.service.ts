@@ -5,7 +5,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ClientsService } from '../../clients/clients.service';
 import { CatalogService } from '../../catalog/catalog.service';
 import { AppointmentsService } from '../../appointments/appointments.service';
+import { UsersService } from '../../users/users.service';
 import { WhatsappOutboundService } from '../whatsapp-outbound.service';
+import { NluService } from './nlu.service';
 import {
   CONTEXT_TIMEOUT_MS,
   ConversationState,
@@ -30,19 +32,13 @@ export class ConversationEngineService {
     private readonly clientsService: ClientsService,
     private readonly catalogService: CatalogService,
     private readonly appointmentsService: AppointmentsService,
+    private readonly usersService: UsersService,
     private readonly outbound: WhatsappOutboundService,
+    private readonly nlu: NluService,
   ) {}
 
-  private async getDefaultProfessional() {
-    // MVP: negócio de 1 consultora principal — o motor de conversa atende
-    // pela primeira profissional ativa. Ver docs/04-plano-implementacao.md
-    // Fase 3 para o caminho de evolução multi-profissional no WhatsApp.
-    const professional = await this.prisma.user.findFirst({
-      where: { active: true },
-      orderBy: { createdAt: 'asc' },
-    });
-    if (!professional) throw new Error('Nenhum profissional cadastrado no sistema.');
-    return professional;
+  private getDefaultProfessional() {
+    return this.usersService.getDefaultProfessional();
   }
 
   async handleIncoming(msg: IncomingMessage): Promise<void> {
@@ -161,7 +157,22 @@ export class ConversationEngineService {
       conversationIdParam ?? (await this.prisma.conversation.findFirst({ where: { clientId } }))?.id;
     if (!conversation) return freshState(ConversationStep.MENU);
 
-    const choice = text.trim();
+    let choice = text.trim();
+
+    // Assistente de IA (opcional, ver NluService): interpreta linguagem
+    // natural e mapeia para a mesma escolha numérica do menu — o motor
+    // determinístico abaixo não muda, só ganha um parser melhor na entrada.
+    const nluResult = await this.nlu.classify(text);
+    if (nluResult && nluResult.confidence >= 0.6 && nluResult.intent !== 'UNKNOWN') {
+      const intentToChoice: Record<string, string> = {
+        SCHEDULE: '1',
+        RESCHEDULE: '2',
+        CANCEL: '3',
+        HUMAN: '4',
+      };
+      choice = intentToChoice[nluResult.intent] ?? choice;
+    }
+
     if (choice === '1' || /agendar/i.test(choice)) {
       return this.startSchedule(conversation);
     }

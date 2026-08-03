@@ -10,9 +10,11 @@ import { MockWhatsappProvider } from './providers/mock-whatsapp.provider';
 import { MetaWhatsappProvider } from './providers/meta-whatsapp.provider';
 import { EvolutionWhatsappProvider } from './providers/evolution-whatsapp.provider';
 import { ConversationEngineService } from './conversation/conversation-engine.service';
+import { NluService } from './conversation/nlu.service';
 import { ClientsModule } from '../clients/clients.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { AppointmentsModule } from '../appointments/appointments.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -20,12 +22,14 @@ import { AppointmentsModule } from '../appointments/appointments.module';
     ClientsModule,
     CatalogModule,
     AppointmentsModule,
+    UsersModule,
   ],
   controllers: [WhatsappController],
   providers: [
     WhatsappOutboundService,
     WhatsappSendProcessor,
     ConversationEngineService,
+    NluService,
     {
       provide: WHATSAPP_PROVIDER,
       useFactory: (

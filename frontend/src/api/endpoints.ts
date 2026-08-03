@@ -5,9 +5,19 @@ import type {
   ClientMedia,
   CurrentUser,
   DashboardKpis,
+  FunnelReport,
+  FunnelStageEvent,
+  LeadSource,
+  OriginReportEntry,
+  PipelineBoard,
+  PipelineMetrics,
+  PipelineStage,
   Professional,
   ScheduleBlock,
   Service,
+  SuccessBoard,
+  SuccessStage,
+  WhatsappMessage,
 } from './types';
 
 export const AuthApi = {
@@ -35,6 +45,64 @@ export const ClientsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+};
+
+export const LeadsApi = {
+  list: (params: { search?: string; source?: LeadSource } = {}) => api.get<Client[]>('/leads', { params }),
+  get: (id: string) => api.get<Client>(`/leads/${id}`),
+  profile: (id: string) =>
+    api.get<{ lead: Client; stageEvents: FunnelStageEvent[]; appointments: Appointment[]; messages: WhatsappMessage[] }>(
+      `/leads/${id}/profile`,
+    ),
+  create: (data: Partial<Client> & { leadSource: LeadSource }) => api.post<Client>('/leads', data),
+  update: (id: string, data: Partial<Client>) => api.patch<Client>(`/leads/${id}`, data),
+  advanceToPipeline: (id: string, reason?: string) => api.post<Client>(`/leads/${id}/advance-to-pipeline`, { reason }),
+};
+
+export const PipelineApi = {
+  board: () => api.get<PipelineBoard>('/pipeline/board'),
+  changeStage: (id: string, data: { toStage: PipelineStage; callDate?: string; reason?: string }) =>
+    api.patch<Client>(`/pipeline/${id}/stage`, data),
+  updateCard: (
+    id: string,
+    data: { nextActionNote?: string; nextActionAt?: string; proposalValue?: number; paymentMethod?: string },
+  ) => api.patch<Client>(`/pipeline/${id}`, data),
+  funnelReport: (params: { from?: string; to?: string } = {}) => api.get<FunnelReport>('/pipeline/funnel-report', { params }),
+  originReport: () => api.get<OriginReportEntry[]>('/pipeline/origin-report'),
+  metrics: () => api.get<PipelineMetrics>('/pipeline/metrics'),
+};
+
+export const ClientSuccessApi = {
+  board: () => api.get<SuccessBoard>('/clients/success-board'),
+  changeStage: (id: string, data: { toStage: SuccessStage; reason?: string }) =>
+    api.patch<Client>(`/clients/${id}/success-stage`, data),
+  intakeLink: (id: string) => api.get<{ url: string }>(`/clients/${id}/intake-link`),
+};
+
+export const IntakeApi = {
+  getForm: (clientId: string, token: string) =>
+    api.get<{
+      name: string;
+      bodyType: string | null;
+      colorPalette: string | null;
+      predominantStyle: string | null;
+      averageBudget: string | number | null;
+      preferredBrands: string[];
+      restrictions: string | null;
+      alreadySubmitted: boolean;
+    }>(`/intake/${clientId}/${token}`),
+  submit: (
+    clientId: string,
+    token: string,
+    data: {
+      bodyType?: string;
+      colorPalette?: string;
+      predominantStyle?: string;
+      averageBudget?: number;
+      preferredBrands?: string[];
+      restrictions?: string;
+    },
+  ) => api.post(`/intake/${clientId}/${token}`, data),
 };
 
 export const CatalogApi = {

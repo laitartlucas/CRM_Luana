@@ -89,8 +89,12 @@ flowchart TB
 | `appointments` | Núcleo da agenda: CRUD de agendamentos, bloqueios de horário (folga/almoço/feriado), detecção de conflito, transições de status (`SCHEDULED → CONFIRMED → COMPLETED / NO_SHOW / CANCELLED`). Única porta de entrada para qualquer escrita de agenda. |
 | `calendar-sync` | OAuth2 com Google, criação/edição/exclusão de eventos espelhados, recepção de webhook de push notification do Google, lógica anti-loop (evita re-sincronizar um evento que a própria sync acabou de escrever). |
 | `whatsapp` | Webhook de recebimento (Meta Cloud API), `WhatsappProvider` (interface) com implementações `MetaCloudApiProvider` e `MockWhatsappProvider`, motor de conversa (agendar/remarcar/cancelar/confirmar), download e associação de mídia recebida ao perfil da cliente. |
-| `notifications` | Filas BullMQ e processors: lembrete 24h/1h, reengajamento pós no-show, follow-up de estilo pós-atendimento, sugestão de reagendamento sazonal. |
-| `dashboard` | Agregações: agendamentos do dia, taxa de confirmação, taxa de no-show, ocupação por profissional, projeção de faturamento. |
+| `notifications` | Filas BullMQ e processors: lembrete 24h/1h (+ reforço de 3h para clientes de risco alto de no-show), reengajamento pós no-show, follow-up de estilo pós-atendimento, sugestão de reagendamento sazonal. |
+| `leads` | Módulo 1 — CRUD de leads (dados de cadastro, origem, relatório de dores/desejos/objeções) e avanço para o Pipeline. Opera sobre `Client` (ver `02-modelo-de-dados.md` §2.1), não uma tabela própria. |
+| `pipeline` | Módulo 2 — Kanban de 12 etapas, única porta de escrita de transição de etapa (`PipelineService`). Listener reage à mudança de etapa: cria a call comercial (Appointment) ao entrar em "Call agendada", flipa `funnelStage`/`successStage` ao fechar, e agenda a checagem automática de não-comparecimento. |
+| `client-success` | Módulo 3 (parte assíncrona) — agenda o lembrete de renovação/indicação quando o cliente entra em "Encerramento"; reage a evento emitido pelo `ClientsService`, mesmo isolamento de falha dos demais listeners. |
+| `intake` | Formulário de intake de estilo nativo (rota pública assinada por HMAC), evita depender de Google Forms/Sheets API. |
+| `dashboard` | Agregações: agendamentos do dia, taxa de confirmação, taxa de no-show, ocupação por profissional, projeção de faturamento. Funil de conversão e atribuição de origem vivem em `pipeline` (`/pipeline/funnel-report`, `/pipeline/origin-report`, `/pipeline/metrics`). |
 | `audit-log` | Interceptor global que grava quem mudou o quê, quando, e o valor antes/depois, para qualquer entidade sensível (agendamentos, clientes, usuários). |
 | `common` | Guards (JWT, Roles), pipes de validação, filtro de exceção que isola falhas de integração externa do restante da request. |
 

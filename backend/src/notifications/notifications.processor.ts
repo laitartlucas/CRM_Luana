@@ -45,12 +45,16 @@ export class NotificationsProcessor extends WorkerHost {
     const text =
       hoursBefore === 24
         ? `Lembrete: você tem "${appointment.service.name}" amanhã, ${when}. Confirma?\n1) Confirmar\n2) Remarcar`
-        : `Falta 1h para "${appointment.service.name}" (${when}). Te espero! Se precisar, digite "2" para remarcar.`;
+        : hoursBefore === 3
+          ? `Não esqueça: "${appointment.service.name}" hoje às ${when.split(' ').pop()}. Confirma sua presença?\n1) Confirmar\n2) Remarcar`
+          : `Falta 1h para "${appointment.service.name}" (${when}). Te espero! Se precisar, digite "2" para remarcar.`;
 
     await this.outbound.sendToClient(appointment.clientId, text);
+    // O lembrete extra de risco alto (3h) não tem coluna própria — só o
+    // envio precisa ser idempotente (jobId determinístico já garante isso).
     await this.prisma.appointment.update({
       where: { id: appointmentId },
-      data: hoursBefore === 24 ? { reminded24hAt: new Date() } : { reminded1hAt: new Date() },
+      data: hoursBefore === 24 ? { reminded24hAt: new Date() } : hoursBefore === 1 ? { reminded1hAt: new Date() } : {},
     });
   }
 

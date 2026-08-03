@@ -1,5 +1,5 @@
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
-import { AppointmentLocation, AppointmentSource } from '@prisma/client';
+import { AppointmentLocation, AppointmentPurpose, AppointmentSource } from '@prisma/client';
 
 export class CreateAppointmentDto {
   @IsString()
@@ -21,6 +21,10 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsEnum(AppointmentSource)
   source?: AppointmentSource;
+
+  @IsOptional()
+  @IsEnum(AppointmentPurpose)
+  purpose?: AppointmentPurpose;
 
   @IsOptional()
   @IsString()

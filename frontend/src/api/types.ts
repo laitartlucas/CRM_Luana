@@ -17,6 +17,45 @@ export interface Service {
   active: boolean;
 }
 
+// Módulo 1 — Leads
+export type FunnelStage = 'LEAD' | 'PIPELINE' | 'CLIENT' | 'LOST';
+export type LeadSource =
+  | 'REEL'
+  | 'CAROUSEL'
+  | 'STORY'
+  | 'KEYWORD'
+  | 'COMMENT'
+  | 'REFERRAL'
+  | 'CHALLENGE'
+  | 'WHATSAPP_GROUP'
+  | 'OTHER';
+
+// Módulo 2 — Pipeline Comercial
+export type PipelineStage =
+  | 'NEW'
+  | 'FIRST_CONTACT'
+  | 'CALL_SCHEDULED'
+  | 'PRE_CALL'
+  | 'POST_CALL'
+  | 'PROPOSAL_SENT'
+  | 'FOLLOW_UP'
+  | 'NOT_SCHEDULED'
+  | 'NO_SHOW'
+  | 'CLOSED_WON'
+  | 'CLOSED_LOST'
+  | 'FUTURE';
+
+// Módulo 3 — Sucesso do Cliente
+export type SuccessStage =
+  | 'NEW_CLIENT'
+  | 'INTAKE_FORM_SENT'
+  | 'FIRST_SESSION'
+  | 'ONGOING'
+  | 'CLOSED'
+  | 'TESTIMONIAL'
+  | 'RENEWAL'
+  | 'REFERRAL';
+
 export interface Client {
   id: string;
   name: string;
@@ -34,6 +73,80 @@ export interface Client {
   marketingConsent: boolean;
   noShowScore: number;
   createdAt: string;
+
+  // Módulo 1 — Leads
+  funnelStage: FunnelStage;
+  instagram?: string | null;
+  city?: string | null;
+  profession?: string | null;
+  leadSource?: LeadSource | null;
+  leadSourceContentRef?: string | null;
+  painPoints?: string | null;
+  desires?: string | null;
+  objections?: string | null;
+  leadNotes?: string | null;
+  leadScore?: number;
+
+  // Módulo 2 — Pipeline Comercial
+  pipelineStage?: PipelineStage | null;
+  pipelineStageEnteredAt?: string | null;
+  callDate?: string | null;
+  lastContactAt?: string | null;
+  nextActionNote?: string | null;
+  nextActionAt?: string | null;
+  proposalValue?: string | number | null;
+  paymentMethod?: string | null;
+
+  // Módulo 3 — Sucesso do Cliente
+  successStage?: SuccessStage | null;
+  successStageEnteredAt?: string | null;
+  intakeFormSubmittedAt?: string | null;
+  renewalReminderSentAt?: string | null;
+}
+
+export interface FunnelStageEvent {
+  id: string;
+  clientId: string;
+  module: 'PIPELINE' | 'SUCCESS';
+  fromStage?: string | null;
+  toStage: string;
+  changedByUser?: { id: string; name: string } | null;
+  reason?: string | null;
+  enteredAt: string;
+  exitedAt?: string | null;
+}
+
+export interface WhatsappMessage {
+  id: string;
+  direction: 'IN' | 'OUT';
+  type: 'TEXT' | 'IMAGE' | 'TEMPLATE' | 'SYSTEM';
+  content?: string | null;
+  mediaUrl?: string | null;
+  status: string;
+  createdAt: string;
+}
+
+export type PipelineBoard = Record<PipelineStage, Client[]>;
+export type SuccessBoard = Record<SuccessStage, Client[]>;
+
+export interface FunnelReport {
+  mainPath: { stage: PipelineStage; count: number; conversionFromPrevious: number | null }[];
+  sideStages: { stage: PipelineStage; count: number }[];
+}
+
+export interface OriginReportEntry {
+  leadSource: LeadSource;
+  contentRef: string | null;
+  leads: number;
+  closedWon: number;
+  conversionRate: number;
+}
+
+export interface PipelineMetrics {
+  avgTimePerStageHours: { stage: string; avgHours: number }[];
+  averageTicket: number;
+  mostUsedPaymentMethod: string | null;
+  closedWonCount: number;
 }
 
 export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';

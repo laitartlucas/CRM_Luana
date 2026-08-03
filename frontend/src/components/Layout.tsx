@@ -3,6 +3,8 @@ import { useAuth } from '../auth/AuthContext';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Painel', end: true },
+  { to: '/leads', label: 'Leads' },
+  { to: '/pipeline', label: 'Pipeline' },
   { to: '/agenda', label: 'Agenda' },
   { to: '/clientes', label: 'Clientes' },
   { to: '/servicos', label: 'Serviços' },

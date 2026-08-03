@@ -25,6 +25,9 @@ async function main() {
     { name: 'Guarda-roupa Cápsula', durationMinutes: 120, price: 700 },
     { name: 'Styling para Eventos', durationMinutes: 60, price: 350 },
     { name: 'Consultoria de Imagem Corporativa', durationMinutes: 120, price: 850 },
+    // Usado pelo Pipeline Comercial ao mover uma lead para "Call agendada" —
+    // não é um serviço vendável, por isso preço 0.
+    { name: 'Call comercial', durationMinutes: 30, price: 0 },
   ];
 
   for (const service of services) {

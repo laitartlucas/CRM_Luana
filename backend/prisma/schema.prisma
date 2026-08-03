@@ -92,6 +92,69 @@ enum AuditAction {
 }
 
 // -----------------------------------------------------------------------
+// Leads / Pipeline Comercial / Sucesso do Cliente
+// -----------------------------------------------------------------------
+
+// Estágio macro da pessoa no funil. Client é usado como identidade única
+// desde o primeiro contato como lead até o acompanhamento pós-venda —
+// ver docs/02-modelo-de-dados.md para o racional (evita recadastro e
+// migração de FK de Conversation/Message/ClientMedia ao "virar cliente").
+enum FunnelStage {
+  LEAD
+  PIPELINE
+  CLIENT
+  LOST
+}
+
+enum LeadSource {
+  REEL
+  CAROUSEL
+  STORY
+  KEYWORD
+  COMMENT
+  REFERRAL
+  CHALLENGE
+  WHATSAPP_GROUP
+  OTHER
+}
+
+enum PipelineStage {
+  NEW
+  FIRST_CONTACT
+  CALL_SCHEDULED
+  PRE_CALL
+  POST_CALL
+  PROPOSAL_SENT
+  FOLLOW_UP
+  NOT_SCHEDULED
+  NO_SHOW
+  CLOSED_WON
+  CLOSED_LOST
+  FUTURE
+}
+
+enum SuccessStage {
+  NEW_CLIENT
+  INTAKE_FORM_SENT
+  FIRST_SESSION
+  ONGOING
+  CLOSED
+  TESTIMONIAL
+  RENEWAL
+  REFERRAL
+}
+
+enum FunnelModule {
+  PIPELINE
+  SUCCESS
+}
+
+enum AppointmentPurpose {
+  COMMERCIAL_CALL
+  STYLING_SESSION
+}
+
+// -----------------------------------------------------------------------
 // Identidade e agenda dos profissionais
 // -----------------------------------------------------------------------
 
@@ -112,6 +175,7 @@ model User {
   scheduleBlocks      ScheduleBlock[]
   googleConnection    GoogleCalendarConnection?
   auditLogs           AuditLog[]
+  funnelStageEvents   FunnelStageEvent[]
 
   @@map("users")
 }
@@ -185,14 +249,76 @@ model Client {
   // Inteligência (Fase 2 alimenta este campo; existe desde o MVP para não migrar schema depois)
   noShowScore Float @default(0)
 
+  // -----------------------------------------------------------------
+  // Módulo 1 — Leads (Marketing)
+  // -----------------------------------------------------------------
+  funnelStage          FunnelStage @default(LEAD)
+  instagram            String?
+  city                 String?
+  profession           String?
+  leadSource           LeadSource?
+  leadSourceContentRef String? // link/descrição do Reel/Carrossel/Story específico
+  painPoints           String?
+  desires              String?
+  objections           String?
+  leadNotes            String?
+
+  // -----------------------------------------------------------------
+  // Módulo 2 — Pipeline Comercial (Kanban)
+  // -----------------------------------------------------------------
+  pipelineStage          PipelineStage?
+  pipelineStageEnteredAt DateTime?
+  callDate               DateTime?
+  lastContactAt          DateTime?
+  nextActionNote         String?
+  nextActionAt           DateTime?
+  proposalValue          Decimal? @db.Decimal(10, 2)
+  paymentMethod          String?
+  leadScore              Float    @default(0)
+
+  // -----------------------------------------------------------------
+  // Módulo 3 — Sucesso do Cliente
+  // -----------------------------------------------------------------
+  successStage          SuccessStage?
+  successStageEnteredAt DateTime?
+  intakeFormSubmittedAt DateTime?
+  renewalReminderSentAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  appointments  Appointment[]
-  media         ClientMedia[]
-  conversations Conversation[]
+  appointments      Appointment[]
+  media             ClientMedia[]
+  conversations     Conversation[]
+  funnelStageEvents FunnelStageEvent[]
 
   @@map("clients")
+}
+
+// -----------------------------------------------------------------------
+// Histórico de etapas — usado pelos dois kanbans (Pipeline e Sucesso do
+// Cliente). Dá tempo médio por etapa e "quem moveu, quando, de onde pra
+// onde" sem depender do diff genérico do AuditInterceptor.
+// -----------------------------------------------------------------------
+
+model FunnelStageEvent {
+  id       String       @id @default(uuid())
+  clientId String
+  client   Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  module   FunnelModule
+
+  fromStage String?
+  toStage   String
+
+  changedByUserId String?
+  changedByUser   User?   @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+  reason          String?
+
+  enteredAt DateTime  @default(now())
+  exitedAt  DateTime?
+
+  @@index([clientId, module])
+  @@map("funnel_stage_events")
 }
 
 model ClientMedia {
@@ -247,6 +373,7 @@ model Appointment {
   status   AppointmentStatus   @default(SCHEDULED)
   location AppointmentLocation @default(PRESENCIAL)
   source   AppointmentSource   @default(WEB)
+  purpose  AppointmentPurpose  @default(STYLING_SESSION)
 
   googleEventId String? @unique
 

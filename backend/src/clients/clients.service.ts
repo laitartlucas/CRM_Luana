@@ -1,28 +1,35 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { MediaSource } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Client, FunnelStage, MediaSource, SuccessStage } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { AddMediaDto } from './dto/add-media.dto';
+import { CLIENT_SUCCESS_EVENTS } from './client.events';
 
 @Injectable()
 export class ClientsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: LocalStorageService,
+    private readonly events: EventEmitter2,
   ) {}
 
+  // "Clientes" (ficha completa) = quem já fechou (Módulo 3). Leads e cards
+  // do Pipeline Comercial têm suas próprias listas em LeadsService/PipelineService,
+  // sobre o mesmo Client — ver funnelStage.
   async list(search?: string) {
     return this.prisma.client.findMany({
-      where: search
-        ? {
-            OR: [
+      where: {
+        funnelStage: FunnelStage.CLIENT,
+        OR: search
+          ? [
               { name: { contains: search, mode: 'insensitive' } },
               { phoneE164: { contains: search } },
-            ],
-          }
-        : undefined,
+            ]
+          : undefined,
+      },
       orderBy: { name: 'asc' },
     });
   }
@@ -162,5 +169,88 @@ export class ClientsService {
         anonymizedAt: new Date(),
       },
     });
+  }
+
+  // -----------------------------------------------------------------
+  // Módulo 3 — Sucesso do Cliente (kanban de 8 etapas)
+  // -----------------------------------------------------------------
+
+  async successBoard() {
+    const clients = await this.prisma.client.findMany({
+      where: { funnelStage: FunnelStage.CLIENT },
+      orderBy: { successStageEnteredAt: 'asc' },
+    });
+    const columns = Object.fromEntries(Object.values(SuccessStage).map((stage) => [stage, [] as Client[]]));
+    for (const client of clients) {
+      if (client.successStage) columns[client.successStage].push(client);
+    }
+    return columns;
+  }
+
+  async changeSuccessStage(id: string, toStage: SuccessStage, userId?: string, reason?: string) {
+    const client = await this.findById(id);
+    if (client.funnelStage !== FunnelStage.CLIENT) {
+      throw new BadRequestException('Esse registro ainda não está no módulo Sucesso do Cliente.');
+    }
+
+    const now = new Date();
+    const fromStage = client.successStage;
+    const results = await this.prisma.$transaction([
+      this.prisma.funnelStageEvent.updateMany({
+        where: { clientId: id, module: 'SUCCESS', exitedAt: null },
+        data: { exitedAt: now },
+      }),
+      this.prisma.funnelStageEvent.create({
+        data: { clientId: id, module: 'SUCCESS', fromStage, toStage, changedByUserId: userId, reason, enteredAt: now },
+      }),
+      this.prisma.client.update({
+        where: { id },
+        data: { successStage: toStage, successStageEnteredAt: now },
+      }),
+    ]);
+    const updated = results[results.length - 1] as Client;
+
+    this.events.emit(CLIENT_SUCCESS_EVENTS.STAGE_CHANGED, { clientId: id, fromStage, toStage });
+    return updated;
+  }
+
+  // -----------------------------------------------------------------
+  // Previsão de no-show (diferencial de IA) — `noShowScore` existe no
+  // schema desde o MVP mas nunca foi calculado em lugar nenhum. Recalculado
+  // incrementalmente (via ClientScoringListener) a cada mudança de status
+  // de Appointment, seguindo a fórmula já esboçada em
+  // docs/04-plano-implementacao.md Fase 2: % de no-show histórico + atraso
+  // médio de confirmação (confirmar em cima da hora é sinal de risco) +
+  // cancelamentos com menos de 12h de antecedência. Heurística v1 — sem
+  // dado histórico real ainda, os pesos são um ponto de partida razoável,
+  // não um modelo treinado.
+  // -----------------------------------------------------------------
+
+  async recalculateNoShowScore(clientId: string): Promise<void> {
+    const appointments = await this.prisma.appointment.findMany({
+      where: { clientId, status: { in: ['COMPLETED', 'NO_SHOW', 'CANCELLED', 'CONFIRMED'] } },
+      select: { status: true, startAt: true, confirmedAt: true, updatedAt: true },
+    });
+    if (appointments.length === 0) return;
+
+    const total = appointments.length;
+    const noShowRate = appointments.filter((a) => a.status === 'NO_SHOW').length / total;
+
+    const confirmedOnes = appointments.filter((a) => a.confirmedAt);
+    const avgConfirmDelayHours = confirmedOnes.length
+      ? confirmedOnes.reduce(
+          (sum, a) => sum + Math.max(0, (a.startAt.getTime() - a.confirmedAt!.getTime()) / 3_600_000),
+          0,
+        ) / confirmedOnes.length
+      : 24; // sem histórico de confirmação = neutro, não penaliza nem bonifica
+    const lateConfirmRisk = avgConfirmDelayHours < 2 ? 1 : avgConfirmDelayHours < 12 ? 0.5 : 0;
+
+    const lateCancels = appointments.filter(
+      (a) => a.status === 'CANCELLED' && a.startAt.getTime() - a.updatedAt.getTime() < 12 * 3_600_000,
+    ).length;
+    const lateCancelRate = lateCancels / total;
+
+    const score = Math.max(0, Math.min(1, noShowRate * 0.6 + lateConfirmRisk * 0.2 + lateCancelRate * 0.2));
+    await this.prisma.client.update({ where: { id: clientId }, data: { noShowScore: score } });
   }
 }

@@ -97,6 +97,7 @@ export class AppointmentsService {
         endAt,
         location: dto.location,
         source: dto.source ?? 'WEB',
+        purpose: dto.purpose ?? 'STYLING_SESSION',
         notes: dto.notes,
       },
       include: { client: true, service: true, professional: true },

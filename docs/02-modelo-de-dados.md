@@ -161,6 +161,41 @@ erDiagram
 - **`AuditLog` é append-only** (sem update/delete permitidos pela aplicação),
   cobrindo todas as mutações de `Appointment`, `Client`, `User`.
 
+## 2.1 Leads / Pipeline Comercial / Sucesso do Cliente
+
+Adicionado depois do MVP inicial (ver `04-plano-implementacao.md`). Decisão
+central: **não existe uma tabela `Lead` separada** — `Client` é a identidade
+única desde o primeiro contato como lead até o acompanhamento pós-venda,
+com um campo `funnelStage` (`LEAD | PIPELINE | CLIENT | LOST`) marcando em
+qual dos três módulos a pessoa está. Isso evita recadastro e qualquer
+migração de FK de `Conversation`/`Message`/`ClientMedia` no momento em que
+"vira cliente" — é a mesma linha o tempo todo.
+
+- **`Client`** ganha os campos dos três módulos: origem/relatório da lead
+  (`leadSource`, `leadSourceContentRef`, `painPoints`, `desires`,
+  `objections`, `leadNotes`, `instagram`, `city`, `profession`), do
+  Pipeline (`pipelineStage`, `pipelineStageEnteredAt`, `callDate`,
+  `nextActionNote`/`nextActionAt`, `proposalValue`, `paymentMethod`,
+  `leadScore`) e do Sucesso do Cliente (`successStage`,
+  `successStageEnteredAt`, `intakeFormSubmittedAt`,
+  `renewalReminderSentAt`).
+- **`FunnelStageEvent`** substitui a necessidade de uma tabela por módulo:
+  histórico de transições (de qual etapa, para qual, quem moveu, quando
+  entrou/saiu), usado tanto pelo kanban do Pipeline (`module=PIPELINE`)
+  quanto pelo do Sucesso do Cliente (`module=SUCCESS`) — dá tempo médio por
+  etapa e auditoria "quem moveu" sem depender do diff genérico do
+  `AuditInterceptor`.
+- **`Appointment.purpose`** (`COMMERCIAL_CALL | STYLING_SESSION`) faz o
+  papel do que seria uma tabela `atendimentos` separada — mover um card
+  para "Call agendada" cria um `Appointment` normal com
+  `purpose=COMMERCIAL_CALL`, reaproveitando de graça o sync com Google
+  Calendar e os lembretes 24h/1h que já existiam para consultorias de
+  estilo.
+- **Leads/Clientes continuam a mesma tabela, mas as *views* são
+  diferentes**: `/leads` = `funnelStage IN (LEAD, PIPELINE)`, `/pipeline` =
+  `funnelStage = PIPELINE` agrupado por `pipelineStage`, `/clientes` =
+  `funnelStage = CLIENT`.
+
 ## 3. O que fica para fases futuras (não está no schema do MVP)
 
 - `AutomationRule` (trigger → condições → ações, no-code): tabela dedicada
