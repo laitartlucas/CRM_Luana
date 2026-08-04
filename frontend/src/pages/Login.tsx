@@ -58,12 +58,24 @@ export default function Login() {
             <p className="subtitle">Acesse seu ateliê de clientes e consultorias.</p>
           </div>
           <label className="field">
-            <span>E-mail</span>
-            <input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
+            <span>Usuário</span>
+            <input
+              type="text"
+              required
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+            />
           </label>
           <label className="field">
             <span>Senha</span>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </label>
           {error && <span className="error-text">{error}</span>}
           <button className="btn" type="submit" disabled={loading} style={{ height: 52 }}>

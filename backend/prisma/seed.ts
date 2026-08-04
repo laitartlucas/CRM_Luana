@@ -4,15 +4,29 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash('Caroline1209', 12);
-
+  // Login é por usuário (campo "name", ver auth.service.ts) — o e-mail aqui
+  // só existe pra satisfazer a coluna obrigatória/única do schema.
+  const luanaHash = await bcrypt.hash('laitart@1997', 12);
   const admin = await prisma.user.upsert({
-    where: { email: 'luana@crm.local' },
-    update: { name: 'Luana', passwordHash },
+    where: { email: 'luana@luanalaitart.com' },
+    update: { name: 'Luana', passwordHash: luanaHash },
     create: {
       name: 'Luana',
-      email: 'luana@crm.local',
-      passwordHash,
+      email: 'luana@luanalaitart.com',
+      passwordHash: luanaHash,
+      role: Role.ADMIN,
+      timezone: 'America/Sao_Paulo',
+    },
+  });
+
+  const testeHash = await bcrypt.hash('514263', 12);
+  await prisma.user.upsert({
+    where: { email: 'teste@luanalaitart.com' },
+    update: { name: 'Teste', passwordHash: testeHash },
+    create: {
+      name: 'Teste',
+      email: 'teste@luanalaitart.com',
+      passwordHash: testeHash,
       role: Role.ADMIN,
       timezone: 'America/Sao_Paulo',
     },
