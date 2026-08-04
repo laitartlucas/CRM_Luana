@@ -81,9 +81,6 @@ export default function Login() {
           <button className="btn" type="submit" disabled={loading} style={{ height: 52 }}>
             {loading ? 'ENTRANDO...' : 'ENTRAR'}
           </button>
-          <a href="/api/auth/google" style={{ textAlign: 'center', fontSize: '0.85rem' }}>
-            ou entrar com Google
-          </a>
         </form>
       </div>
     </div>
