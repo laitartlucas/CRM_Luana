@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Inject,
   Logger,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -24,6 +25,8 @@ import { WHATSAPP_PROVIDER, WhatsappProvider } from './providers/whatsapp-provid
 import { EvolutionWhatsappProvider } from './providers/evolution-whatsapp.provider';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { SimulateInboundDto } from './dto/simulate-inbound.dto';
+import { SendMessageDto } from './dto/send-message.dto';
+import { WhatsappOutboundService } from './whatsapp-outbound.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('whatsapp')
@@ -37,7 +40,18 @@ export class WhatsappController {
     private readonly evolutionProvider: EvolutionWhatsappProvider,
     private readonly storage: LocalStorageService,
     private readonly prisma: PrismaService,
+    private readonly outbound: WhatsappOutboundService,
   ) {}
+
+  /** Envio manual de mensagem pela consultora, direto da ficha do cliente/lead. */
+  @UseGuards(RolesGuard)
+  @Post('send')
+  async sendManual(@Body() dto: SendMessageDto) {
+    const client = await this.prisma.client.findUnique({ where: { id: dto.clientId } });
+    if (!client) throw new NotFoundException('Cliente não encontrado.');
+    await this.outbound.sendToClient(dto.clientId, dto.text);
+    return { ok: true };
+  }
 
   /** Verificação do webhook exigida pela Meta ao cadastrar a URL. */
   @Public()

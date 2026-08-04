@@ -39,6 +39,8 @@ export const ClientsApi = {
     api.get<{ client: Client; appointments: Appointment[]; media: ClientMedia[] }>(`/clients/${id}/profile`),
   create: (data: Partial<Client>) => api.post<Client>('/clients', data),
   update: (id: string, data: Partial<Client>) => api.patch<Client>(`/clients/${id}`, data),
+  remove: (id: string) => api.delete(`/clients/${id}`),
+  removeAll: (confirmationText: string) => api.delete('/clients', { data: { confirmationText } }),
   uploadMedia: (id: string, file: File, caption?: string) => {
     const form = new FormData();
     form.append('file', file);
@@ -58,6 +60,7 @@ export const LeadsApi = {
     ),
   create: (data: Partial<Client> & { leadSource: LeadSource }) => api.post<Client>('/leads', data),
   update: (id: string, data: Partial<Client>) => api.patch<Client>(`/leads/${id}`, data),
+  remove: (id: string) => api.delete(`/leads/${id}`),
   advanceToPipeline: (id: string, reason?: string) => api.post<Client>(`/leads/${id}/advance-to-pipeline`, { reason }),
 };
 
@@ -161,6 +164,7 @@ export const WhatsappApi = {
     api.post('/whatsapp/simulate/inbound', { phoneE164, text }),
   evolutionStatus: () => api.get<{ connected: boolean; state: string }>('/whatsapp/evolution/status'),
   evolutionConnect: () => api.post<{ qrCodeBase64: string | null }>('/whatsapp/evolution/connect'),
+  send: (clientId: string, text: string) => api.post<{ ok: true }>('/whatsapp/send', { clientId, text }),
 };
 
 export const UsersApi = {

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CalendarSyncApi, UsersApi, WhatsappApi } from '../api/endpoints';
+import { CalendarSyncApi, ClientsApi, UsersApi, WhatsappApi } from '../api/endpoints';
 import type { MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { useProfessional } from '../hooks/useProfessional';
+
+const WIPE_CONFIRMATION_PHRASE = 'APAGAR TUDO';
 
 const TEMPLATE_ORDER: MessageTemplateKey[] = [
   'reminder24h',
@@ -15,7 +18,12 @@ const TEMPLATE_ORDER: MessageTemplateKey[] = [
 
 export default function Settings() {
   const { professional } = useProfessional();
+  const { user } = useAuth();
   const [params] = useSearchParams();
+  const [wipeInput, setWipeInput] = useState('');
+  const [wiping, setWiping] = useState(false);
+  const [wipeError, setWipeError] = useState<string | null>(null);
+  const [wipeResult, setWipeResult] = useState<string | null>(null);
   const [health, setHealth] = useState<{ connected: boolean; lastSyncAt?: string; lastSyncError?: string | null } | null>(
     null,
   );
@@ -120,6 +128,25 @@ export default function Settings() {
   async function handleSimulate() {
     const res = await WhatsappApi.simulateInbound(simPhone, simText);
     setSimLog((res.data as any)?.messages ?? []);
+  }
+
+  async function handleWipeAll() {
+    if (wipeInput.trim() !== WIPE_CONFIRMATION_PHRASE) return;
+    if (!window.confirm('Última confirmação: isso apaga TODAS as clientes e leads, com agendamentos e conversas. Não tem volta. Continuar?')) {
+      return;
+    }
+    setWiping(true);
+    setWipeError(null);
+    setWipeResult(null);
+    try {
+      const res = await ClientsApi.removeAll(wipeInput.trim());
+      setWipeResult(`Pronto — ${res.data.deletedClients} registro(s) apagado(s).`);
+      setWipeInput('');
+    } catch (err: any) {
+      setWipeError(err?.response?.data?.message ?? 'Não foi possível apagar os cadastros.');
+    } finally {
+      setWiping(false);
+    }
   }
 
   return (
@@ -290,6 +317,34 @@ export default function Settings() {
             ))}
         </div>
       </div>
+
+      {user?.role === 'ADMIN' && (
+        <div className="card" style={{ marginTop: '1.25rem', borderColor: 'var(--color-danger)' }}>
+          <h3 style={{ marginTop: 0, color: 'var(--color-danger)' }}>Zona de risco</h3>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+            Apaga permanentemente TODAS as clientes e leads cadastradas, junto com agendamentos, conversas e mensagens
+            ligados a elas. Não existe "desfazer". Para confirmar, digite <strong>{WIPE_CONFIRMATION_PHRASE}</strong>{' '}
+            abaixo.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              value={wipeInput}
+              onChange={(e) => setWipeInput(e.target.value)}
+              placeholder={WIPE_CONFIRMATION_PHRASE}
+              style={{ maxWidth: 220 }}
+            />
+            <button
+              className="btn danger"
+              disabled={wiping || wipeInput.trim() !== WIPE_CONFIRMATION_PHRASE}
+              onClick={handleWipeAll}
+            >
+              {wiping ? 'Apagando...' : 'Apagar todos os clientes e leads'}
+            </button>
+          </div>
+          {wipeError && <p className="error-text">{wipeError}</p>}
+          {wipeResult && <p style={{ color: 'var(--color-success)' }}>{wipeResult}</p>}
+        </div>
+      )}
     </div>
   );
 }

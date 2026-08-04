@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { LeadSource } from '@prisma/client';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { LeadSource, Role } from '@prisma/client';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { Audit } from '../common/decorators/audit.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { LeadsService } from './leads.service';
+import { ClientsService } from '../clients/clients.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { AdvanceToPipelineDto } from './dto/advance-to-pipeline.dto';
@@ -11,7 +13,10 @@ import { AdvanceToPipelineDto } from './dto/advance-to-pipeline.dto';
 @UseGuards(RolesGuard)
 @Controller('leads')
 export class LeadsController {
-  constructor(private readonly leadsService: LeadsService) {}
+  constructor(
+    private readonly leadsService: LeadsService,
+    private readonly clientsService: ClientsService,
+  ) {}
 
   @Get()
   list(@Query('search') search?: string, @Query('source') source?: LeadSource) {
@@ -38,6 +43,15 @@ export class LeadsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateLeadDto) {
     return this.leadsService.update(id, dto);
+  }
+
+  // Leads e clientes vivem na mesma tabela (ver funnelStage) — reaproveita
+  // ClientsService.remove, que já cuida da exclusão em cascata correta.
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Audit('client')
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.clientsService.remove(id);
   }
 
   @Audit('client')

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ClientsApi, ClientSuccessApi } from '../api/endpoints';
 import type { Appointment, Client, ClientMedia, SuccessStage } from '../api/types';
 import { SUCCESS_STAGE_LABELS, SUCCESS_STAGE_ORDER } from '../constants/pipelineLabels';
+import { SendMessageModal } from '../components/SendMessageModal';
 
 const STYLE_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'bodyType', label: 'Tipo de corpo' },
@@ -21,6 +22,8 @@ export default function ClientDetail() {
   const [saving, setSaving] = useState(false);
   const [changingStage, setChangingStage] = useState(false);
   const [intakeLink, setIntakeLink] = useState<string | null>(null);
+  const [messaging, setMessaging] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   function load() {
     if (!id) return;
@@ -80,6 +83,21 @@ export default function ClientDetail() {
     setIntakeLink(res.data.url);
   }
 
+  async function handleDelete() {
+    if (!id || !client) return;
+    if (!window.confirm(`Excluir ${client.name || 'esta cliente'} definitivamente? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await ClientsApi.remove(id);
+      navigate('/clientes');
+    } catch (err: any) {
+      window.alert(err?.response?.data?.message ?? 'Não foi possível excluir esta cliente.');
+      setDeleting(false);
+    }
+  }
+
   if (!client) return <p>Carregando...</p>;
 
   return (
@@ -87,8 +105,20 @@ export default function ClientDetail() {
       <button className="btn-link" onClick={() => navigate('/clientes')}>
         ← Voltar
       </button>
-      <h1>{client.name || '(sem nome)'}</h1>
-      <p style={{ color: 'var(--color-text-muted)', marginTop: '-0.75rem' }}>{client.phoneE164}</p>
+      <div className="toolbar" style={{ marginBottom: '-0.5rem' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>{client.name || '(sem nome)'}</h1>
+          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{client.phoneE164}</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.6rem' }}>
+          <button className="btn secondary" onClick={() => setMessaging(true)}>
+            Enviar mensagem
+          </button>
+          <button className="btn danger" disabled={deleting} onClick={handleDelete}>
+            {deleting ? 'Excluindo...' : 'Excluir cliente'}
+          </button>
+        </div>
+      </div>
 
       <div className="two-col">
         <div className="card">
@@ -174,6 +204,15 @@ export default function ClientDetail() {
           </div>
         </div>
       </div>
+
+      {messaging && (
+        <SendMessageModal
+          clientId={client.id}
+          clientName={client.name}
+          onClose={() => setMessaging(false)}
+          onSent={() => setMessaging(false)}
+        />
+      )}
     </div>
   );
 }

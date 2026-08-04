@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -22,6 +23,7 @@ import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { AddMediaDto } from './dto/add-media.dto';
 import { ChangeSuccessStageDto } from './dto/change-success-stage.dto';
+import { ConfirmWipeDto } from './dto/confirm-wipe.dto';
 import { IntakeService } from '../intake/intake.service';
 
 @UseGuards(RolesGuard)
@@ -65,6 +67,25 @@ export class ClientsController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateClientDto) {
     return this.clientsService.update(id, dto);
+  }
+
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Audit('client')
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.clientsService.remove(id);
+  }
+
+  /**
+   * Apaga TODOS os clientes e leads cadastrados (irreversível). Restrito a
+   * ADMIN e exige a frase de confirmação exata no corpo da requisição — a UI
+   * (Configurações → Zona de risco) obriga a usuária a digitá-la.
+   */
+  @Roles(Role.ADMIN)
+  @Audit('client')
+  @Delete()
+  removeAll(@Body() dto: ConfirmWipeDto) {
+    return this.clientsService.removeAll();
   }
 
   @Post(':id/media')

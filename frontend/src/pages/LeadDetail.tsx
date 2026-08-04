@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { LeadsApi } from '../api/endpoints';
 import type { Appointment, Client, FunnelStageEvent, WhatsappMessage } from '../api/types';
 import { LEAD_SOURCE_LABELS, PIPELINE_STAGE_LABELS } from '../constants/pipelineLabels';
+import { SendMessageModal } from '../components/SendMessageModal';
 
 const REPORT_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'painPoints', label: 'Principais dores' },
@@ -20,6 +21,8 @@ export default function LeadDetail() {
   const [messages, setMessages] = useState<WhatsappMessage[]>([]);
   const [saving, setSaving] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [messaging, setMessaging] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   function load() {
     if (!id) return;
@@ -67,6 +70,21 @@ export default function LeadDetail() {
     }
   }
 
+  async function handleDelete() {
+    if (!id || !lead) return;
+    if (!window.confirm(`Excluir ${lead.name || 'esta lead'} definitivamente? Essa ação não pode ser desfeita.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await LeadsApi.remove(id);
+      navigate('/leads');
+    } catch (err: any) {
+      window.alert(err?.response?.data?.message ?? 'Não foi possível excluir esta lead.');
+      setDeleting(false);
+    }
+  }
+
   if (!lead) return <p>Carregando...</p>;
 
   return (
@@ -74,11 +92,23 @@ export default function LeadDetail() {
       <button className="btn-link" onClick={() => navigate('/leads')}>
         ← Voltar
       </button>
-      <h1>{lead.name || '(sem nome)'}</h1>
-      <p style={{ color: 'var(--color-text-muted)', marginTop: '-0.75rem' }}>
-        {lead.phoneE164} {lead.leadSource ? `· ${LEAD_SOURCE_LABELS[lead.leadSource]}` : ''}
-        {lead.leadSourceContentRef ? ` (${lead.leadSourceContentRef})` : ''}
-      </p>
+      <div className="toolbar" style={{ marginBottom: '-0.5rem' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>{lead.name || '(sem nome)'}</h1>
+          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+            {lead.phoneE164} {lead.leadSource ? `· ${LEAD_SOURCE_LABELS[lead.leadSource]}` : ''}
+            {lead.leadSourceContentRef ? ` (${lead.leadSourceContentRef})` : ''}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.6rem' }}>
+          <button className="btn secondary" onClick={() => setMessaging(true)}>
+            Enviar mensagem
+          </button>
+          <button className="btn danger" disabled={deleting} onClick={handleDelete}>
+            {deleting ? 'Excluindo...' : 'Excluir lead'}
+          </button>
+        </div>
+      </div>
 
       <div className="two-col">
         <div className="card">
@@ -174,6 +204,15 @@ export default function LeadDetail() {
           </div>
         </div>
       </div>
+
+      {messaging && (
+        <SendMessageModal
+          clientId={lead.id}
+          clientName={lead.name}
+          onClose={() => setMessaging(false)}
+          onSent={() => setMessaging(false)}
+        />
+      )}
     </div>
   );
 }

@@ -226,6 +226,32 @@ export class ClientsService {
   // não um modelo treinado.
   // -----------------------------------------------------------------
 
+  // -----------------------------------------------------------------
+  // Exclusão — usada tanto pela tela de Clientes quanto pela de Leads
+  // (mesma tabela, ver funnelStage). Appointment.client não tem onDelete
+  // Cascade no schema (relação obrigatória, default é Restrict), então os
+  // agendamentos precisam ser apagados antes do cliente na mesma transação.
+  // Conversation/Message/ClientMedia/FunnelStageEvent já cascateiam.
+  // -----------------------------------------------------------------
+
+  async remove(id: string): Promise<{ ok: true }> {
+    await this.findById(id);
+    await this.prisma.$transaction([
+      this.prisma.appointment.deleteMany({ where: { clientId: id } }),
+      this.prisma.client.delete({ where: { id } }),
+    ]);
+    return { ok: true };
+  }
+
+  /** Apaga TODOS os clientes/leads cadastrados. Irreversível — ver ClientsController para a confirmação exigida. */
+  async removeAll(): Promise<{ deletedClients: number }> {
+    const [, { count }] = await this.prisma.$transaction([
+      this.prisma.appointment.deleteMany({}),
+      this.prisma.client.deleteMany({}),
+    ]);
+    return { deletedClients: count };
+  }
+
   async recalculateNoShowScore(clientId: string): Promise<void> {
     const appointments = await this.prisma.appointment.findMany({
       where: { clientId, status: { in: ['COMPLETED', 'NO_SHOW', 'CANCELLED', 'CONFIRMED'] } },
