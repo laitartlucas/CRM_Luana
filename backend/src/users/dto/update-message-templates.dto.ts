@@ -4,6 +4,11 @@ export class UpdateMessageTemplatesDto {
   @IsOptional()
   @IsString()
   @MaxLength(1000)
+  newLeadOutreach?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
   reminder24h?: string;
 
   @IsOptional()

@@ -4,6 +4,7 @@ import { UsersApi, WhatsappApi } from '../api/endpoints';
 import type { MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
 
 const TEMPLATE_ORDER: MessageTemplateKey[] = [
+  'newLeadOutreach',
   'reminder24h',
   'reminder3h',
   'reminder1h',

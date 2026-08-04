@@ -8,6 +8,7 @@ import { useProfessional } from '../hooks/useProfessional';
 const WIPE_CONFIRMATION_PHRASE = 'APAGAR TUDO';
 
 const TEMPLATE_ORDER: MessageTemplateKey[] = [
+  'newLeadOutreach',
   'reminder24h',
   'reminder3h',
   'reminder1h',

@@ -1,4 +1,5 @@
 export type MessageTemplateKey =
+  | 'newLeadOutreach'
   | 'reminder24h'
   | 'reminder3h'
   | 'reminder1h'
@@ -16,6 +17,13 @@ interface MessageTemplateMeta {
 }
 
 export const MESSAGE_TEMPLATE_META: Record<MessageTemplateKey, MessageTemplateMeta> = {
+  newLeadOutreach: {
+    label: 'Abordagem — cliente nova',
+    description: 'Primeira mensagem para abordar uma lead/cliente nova, use ao enviar manualmente pela ficha dela.',
+    variables: ['cliente'],
+    default:
+      'Oi {{cliente}}! Aqui é a Luana, consultora de imagem 💛 Vi seu interesse e fiquei muito feliz! Quero te conhecer melhor e entender como posso te ajudar a montar looks com mais confiança. Topa bater um papo rapidinho?',
+  },
   reminder24h: {
     label: 'Lembrete — 24h antes',
     description: 'Enviado um dia antes da consultoria agendada.',

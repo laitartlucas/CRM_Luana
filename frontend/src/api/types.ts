@@ -9,6 +9,7 @@ export interface CurrentUser {
 }
 
 export type MessageTemplateKey =
+  | 'newLeadOutreach'
   | 'reminder24h'
   | 'reminder3h'
   | 'reminder1h'
