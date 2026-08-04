@@ -84,3 +84,10 @@ export function resolveMessageTemplate(
   const raw = templates?.[key]?.trim() || MESSAGE_TEMPLATE_META[key].default;
   return renderMessageTemplate(raw, vars);
 }
+
+/** Mensagens extras que a própria usuária cria, sem chave fixa — quantas ela quiser. */
+export interface CustomMessageTemplate {
+  id: string;
+  label: string;
+  text: string;
+}

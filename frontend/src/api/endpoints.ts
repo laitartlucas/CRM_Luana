@@ -4,6 +4,7 @@ import type {
   Client,
   ClientMedia,
   CurrentUser,
+  CustomMessageTemplate,
   DashboardKpis,
   FunnelReport,
   FunnelStageEvent,
@@ -167,9 +168,20 @@ export const WhatsappApi = {
   send: (clientId: string, text: string) => api.post<{ ok: true }>('/whatsapp/send', { clientId, text }),
 };
 
+type MessageTemplatesResponse = {
+  templates: MessageTemplates;
+  meta: Record<string, MessageTemplateMeta>;
+  custom: CustomMessageTemplate[];
+};
+
 export const UsersApi = {
-  getMessageTemplates: () =>
-    api.get<{ templates: MessageTemplates; meta: Record<string, MessageTemplateMeta> }>('/users/me/message-templates'),
+  getMessageTemplates: () => api.get<MessageTemplatesResponse>('/users/me/message-templates'),
   updateMessageTemplates: (data: Partial<MessageTemplates>) =>
-    api.put<{ templates: MessageTemplates; meta: Record<string, MessageTemplateMeta> }>('/users/me/message-templates', data),
+    api.put<MessageTemplatesResponse>('/users/me/message-templates', data),
+  addCustomTemplate: (data: { label: string; text: string }) =>
+    api.post<MessageTemplatesResponse>('/users/me/message-templates/custom', data),
+  updateCustomTemplate: (id: string, data: { label?: string; text?: string }) =>
+    api.patch<MessageTemplatesResponse>(`/users/me/message-templates/custom/${id}`, data),
+  removeCustomTemplate: (id: string) =>
+    api.delete<MessageTemplatesResponse>(`/users/me/message-templates/custom/${id}`),
 };

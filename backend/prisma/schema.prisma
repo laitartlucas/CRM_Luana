@@ -168,6 +168,7 @@ model User {
   timezone     String  @default("America/Sao_Paulo")
   active       Boolean @default(true)
   messageTemplates Json?
+  customMessageTemplates Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

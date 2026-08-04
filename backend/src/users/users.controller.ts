@@ -8,6 +8,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateMessageTemplatesDto } from './dto/update-message-templates.dto';
+import { CreateCustomMessageTemplateDto, UpdateCustomMessageTemplateDto } from './dto/custom-message-template.dto';
 
 @UseGuards(RolesGuard)
 @Controller('users')
@@ -35,6 +36,29 @@ export class UsersController {
   @Audit('user')
   updateMyMessageTemplates(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateMessageTemplatesDto) {
     return this.usersService.updateMessageTemplates(user.id, dto);
+  }
+
+  /** Mensagens personalizadas — sem chave fixa, a usuária cria/edita/apaga quantas quiser. */
+  @Post('me/message-templates/custom')
+  @Audit('user')
+  addCustomMessageTemplate(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateCustomMessageTemplateDto) {
+    return this.usersService.addCustomTemplate(user.id, dto);
+  }
+
+  @Patch('me/message-templates/custom/:templateId')
+  @Audit('user')
+  updateCustomMessageTemplate(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('templateId') templateId: string,
+    @Body() dto: UpdateCustomMessageTemplateDto,
+  ) {
+    return this.usersService.updateCustomTemplate(user.id, templateId, dto);
+  }
+
+  @Delete('me/message-templates/custom/:templateId')
+  @Audit('user')
+  removeCustomMessageTemplate(@CurrentUser() user: AuthenticatedUser, @Param('templateId') templateId: string) {
+    return this.usersService.removeCustomTemplate(user.id, templateId);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)

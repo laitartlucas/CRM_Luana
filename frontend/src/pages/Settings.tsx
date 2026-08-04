@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CalendarSyncApi, ClientsApi, UsersApi, WhatsappApi } from '../api/endpoints';
-import type { MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
+import type { CustomMessageTemplate, MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useProfessional } from '../hooks/useProfessional';
 
@@ -44,14 +44,74 @@ export default function Settings() {
   const [templateSavedAt, setTemplateSavedAt] = useState<Record<string, number>>({});
   const [templateError, setTemplateError] = useState<string | null>(null);
 
+  const [customTemplates, setCustomTemplates] = useState<CustomMessageTemplate[] | null>(null);
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [savingCustomId, setSavingCustomId] = useState<string | null>(null);
+  const [newCustomLabel, setNewCustomLabel] = useState('');
+  const [newCustomText, setNewCustomText] = useState('');
+  const [addingCustom, setAddingCustom] = useState(false);
+
   useEffect(() => {
     UsersApi.getMessageTemplates()
       .then((res) => {
         setTemplateMeta(res.data.meta);
         setTemplateDrafts(res.data.templates);
+        setCustomTemplates(res.data.custom);
       })
       .catch(() => setTemplateError('Não foi possível carregar os padrões de mensagem.'));
   }, []);
+
+  function updateCustomDraft(id: string, patch: Partial<CustomMessageTemplate>) {
+    setCustomTemplates((prev) => (prev ? prev.map((t) => (t.id === id ? { ...t, ...patch } : t)) : prev));
+  }
+
+  async function saveCustomTemplate(id: string) {
+    const template = customTemplates?.find((t) => t.id === id);
+    if (!template) return;
+    setSavingCustomId(id);
+    setCustomError(null);
+    try {
+      const res = await UsersApi.updateCustomTemplate(id, { label: template.label, text: template.text });
+      setCustomTemplates(res.data.custom);
+    } catch (err: any) {
+      setCustomError(err?.response?.data?.message ?? 'Não foi possível salvar essa mensagem.');
+    } finally {
+      setSavingCustomId(null);
+    }
+  }
+
+  async function deleteCustomTemplate(id: string) {
+    if (!window.confirm('Excluir esta mensagem personalizada?')) return;
+    setSavingCustomId(id);
+    setCustomError(null);
+    try {
+      const res = await UsersApi.removeCustomTemplate(id);
+      setCustomTemplates(res.data.custom);
+    } catch (err: any) {
+      setCustomError(err?.response?.data?.message ?? 'Não foi possível excluir essa mensagem.');
+    } finally {
+      setSavingCustomId(null);
+    }
+  }
+
+  async function addCustomTemplate() {
+    if (!newCustomLabel.trim() || !newCustomText.trim()) {
+      setCustomError('Dê um nome e um texto para a nova mensagem.');
+      return;
+    }
+    setAddingCustom(true);
+    setCustomError(null);
+    try {
+      const res = await UsersApi.addCustomTemplate({ label: newCustomLabel.trim(), text: newCustomText.trim() });
+      setCustomTemplates(res.data.custom);
+      setNewCustomLabel('');
+      setNewCustomText('');
+    } catch (err: any) {
+      setCustomError(err?.response?.data?.message ?? 'Não foi possível criar essa mensagem.');
+    } finally {
+      setAddingCustom(false);
+    }
+  }
 
   async function saveTemplate(key: MessageTemplateKey) {
     if (!templateDrafts) return;
@@ -285,6 +345,71 @@ export default function Settings() {
             })}
           </div>
         )}
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.25rem' }}>
+        <h3 style={{ marginTop: 0 }}>Mensagens personalizadas</h3>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+          Crie quantas mensagens quiser, com o nome que preferir — elas aparecem junto com os modelos prontos na hora
+          de enviar mensagem para uma cliente ou lead.
+        </p>
+        {customError && <p className="error-text">{customError}</p>}
+        {customTemplates && customTemplates.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '1rem' }}>
+            {customTemplates.map((t) => (
+              <div key={t.id} style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem' }}>
+                <input
+                  value={t.label}
+                  onChange={(e) => updateCustomDraft(t.id, { label: e.target.value })}
+                  style={{ fontWeight: 700, marginBottom: '0.5rem', width: '100%', maxWidth: 320 }}
+                />
+                <textarea
+                  rows={3}
+                  value={t.text}
+                  onChange={(e) => updateCustomDraft(t.id, { text: e.target.value })}
+                  style={{ width: '100%', resize: 'vertical' }}
+                />
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button className="btn" disabled={savingCustomId === t.id} onClick={() => saveCustomTemplate(t.id)}>
+                    {savingCustomId === t.id ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    className="btn secondary"
+                    style={{ color: 'var(--color-danger)' }}
+                    disabled={savingCustomId === t.id}
+                    onClick={() => deleteCustomTemplate(t.id)}
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ borderTop: '1px solid var(--color-border-light)', paddingTop: '1rem', marginTop: customTemplates?.length ? '1.25rem' : '1rem' }}>
+          <div className="form-grid">
+            <label className="field">
+              Nome da mensagem
+              <input
+                placeholder="Ex.: Convite para evento"
+                value={newCustomLabel}
+                onChange={(e) => setNewCustomLabel(e.target.value)}
+              />
+            </label>
+          </div>
+          <label className="field" style={{ marginTop: '0.75rem' }}>
+            Texto
+            <textarea
+              rows={3}
+              placeholder="Escreva o texto da nova mensagem..."
+              value={newCustomText}
+              onChange={(e) => setNewCustomText(e.target.value)}
+            />
+          </label>
+          <button className="btn" style={{ marginTop: '0.75rem' }} disabled={addingCustom} onClick={addCustomTemplate}>
+            {addingCustom ? 'Adicionando...' : '+ Nova mensagem'}
+          </button>
+        </div>
       </div>
 
       <div className="card">

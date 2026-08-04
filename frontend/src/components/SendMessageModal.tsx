@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
 import { UsersApi, WhatsappApi } from '../api/endpoints';
-import type { MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
+import type { CustomMessageTemplate, MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
 
 const TEMPLATE_ORDER: MessageTemplateKey[] = [
   'newLeadOutreach',
@@ -26,6 +26,7 @@ export function SendMessageModal({
 }) {
   const [templates, setTemplates] = useState<MessageTemplates | null>(null);
   const [meta, setMeta] = useState<Record<string, MessageTemplateMeta> | null>(null);
+  const [custom, setCustom] = useState<CustomMessageTemplate[]>([]);
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -35,15 +36,22 @@ export function SendMessageModal({
       .then((res) => {
         setTemplates(res.data.templates);
         setMeta(res.data.meta);
+        setCustom(res.data.custom);
       })
       .catch(() => {
         /* modelos são só um atalho — sem eles ainda dá pra escrever mensagem livre */
       });
   }, []);
 
-  function applyTemplate(key: string) {
-    if (!key || !templates) return;
-    const raw = templates[key as MessageTemplateKey] ?? '';
+  function applyTemplate(value: string) {
+    if (!value) return;
+    let raw = '';
+    if (value.startsWith('custom:')) {
+      const id = value.slice('custom:'.length);
+      raw = custom.find((t) => t.id === id)?.text ?? '';
+    } else {
+      raw = templates?.[value as MessageTemplateKey] ?? '';
+    }
     setText(raw.replace(/\{\{\s*cliente\s*\}\}/g, clientName || 'cliente'));
   }
 
@@ -76,6 +84,15 @@ export function SendMessageModal({
                 {meta[key].label}
               </option>
             ))}
+            {custom.length > 0 && (
+              <optgroup label="Minhas mensagens">
+                {custom.map((t) => (
+                  <option key={t.id} value={`custom:${t.id}`}>
+                    {t.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
       )}

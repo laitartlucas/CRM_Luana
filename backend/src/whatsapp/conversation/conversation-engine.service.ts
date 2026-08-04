@@ -7,7 +7,6 @@ import { CatalogService } from '../../catalog/catalog.service';
 import { AppointmentsService } from '../../appointments/appointments.service';
 import { UsersService } from '../../users/users.service';
 import { WhatsappOutboundService } from '../whatsapp-outbound.service';
-import { NluService } from './nlu.service';
 import {
   CONTEXT_TIMEOUT_MS,
   ConversationState,
@@ -23,6 +22,47 @@ interface IncomingMessage {
   mediaSavedUrl?: string; // já baixada e salva em disco pelo controller, se houver
 }
 
+// Texto do menu principal do canal oficial — mostrado sempre que a
+// conversa entra/reentra em ConversationStep.MENU (primeiro contato,
+// timeout de inatividade, ou escolha não reconhecida).
+const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo. 🤎
+Para direcionar você da melhor forma, responda com o número da opção desejada:
+1️⃣ Falar com a Luana
+Atendimento, dúvidas ou orientações.
+2️⃣ Conhecer o Método Look Pronto
+Descubra como a mentoria pode transformar a forma como você se veste e se posiciona.
+3️⃣ Conhecer a Comunidade Look Pronto
+Veja como funciona a comunidade e tudo o que ela oferece.
+4️⃣ Já sou cliente
+Suporte, acompanhamento e dúvidas sobre sua mentoria.
+5️⃣ Outro assunto
+Escreva sua mensagem e retornaremos o mais breve possível.`;
+
+const TALK_TO_LUANA_TEXT = `Que bom ter você por aqui!
+Para que eu possa entender melhor como te ajudar, me conte brevemente qual é o motivo do seu contato.
+Assim que eu estiver disponível, responderei você com toda atenção.`;
+
+const METHOD_TEXT = `Fico muito feliz pelo seu interesse no Método Look Pronto! 🤎
+Antes de te explicar como funciona, quero entender um pouquinho sobre você.
+Me responda:
+
+* Qual é a sua maior dificuldade hoje em relação à sua imagem?
+* Qual a sua profissão?`;
+
+const COMMUNITY_TEXT = `Que bom que você quer fazer parte da Comunidade Look Pronto!
+A comunidade é totalmente gratuita e foi criada para mulheres que desejam aprender a se vestir com mais estratégia, praticidade e confiança.
+Lá você recebe conteúdos exclusivos, dicas, desafios, materiais e fica por dentro de todas as novidades.
+Entre agora pelo link: https://chat.whatsapp.com/GnQ20LTjh1iC6yF0z9HCZO?mode=gi_t
+
+Seja muito bem-vinda! Espero você por lá. ✨`;
+
+const EXISTING_CLIENT_TEXT = `Que bom ter você por aqui novamente! 🤎
+Como posso ajudar você hoje?
+Descreva sua dúvida ou necessidade e retornaremos o mais breve possível.`;
+
+const OTHER_SUBJECT_TEXT = `Perfeito! 🤎
+Escreva sua mensagem e, assim que possível, retornaremos para ajudar você da melhor forma.`;
+
 @Injectable()
 export class ConversationEngineService {
   private readonly logger = new Logger(ConversationEngineService.name);
@@ -34,7 +74,6 @@ export class ConversationEngineService {
     private readonly appointmentsService: AppointmentsService,
     private readonly usersService: UsersService,
     private readonly outbound: WhatsappOutboundService,
-    private readonly nlu: NluService,
   ) {}
 
   private getDefaultProfessional() {
@@ -47,7 +86,7 @@ export class ConversationEngineService {
     });
     if (alreadyProcessed) return; // idempotência: Meta pode reentregar o mesmo evento
 
-    const client = await this.clientsService.findOrCreateByPhone(msg.phoneE164);
+    const client = await this.clientsService.findOrCreateByPhone(msg.phoneE164, msg.profileName);
 
     const conversation = await this.prisma.conversation.upsert({
       where: { channel_externalId: { channel: 'WHATSAPP', externalId: msg.phoneE164 } },
@@ -80,9 +119,7 @@ export class ConversationEngineService {
     const text = (msg.text ?? '').trim();
     let state = this.parseState(conversation.state as any);
 
-    if (!client.whatsappConsent) {
-      state = await this.stepOnboarding(client.id, state, text);
-    } else if (state.step === ConversationStep.MENU || this.isStale(state)) {
+    if (state.step === ConversationStep.MENU || this.isStale(state)) {
       state = await this.stepMenu(client.id, text);
     } else {
       state = await this.routeStep(client.id, state, text);
@@ -108,48 +145,7 @@ export class ConversationEngineService {
   }
 
   // ---------------------------------------------------------------------
-  // Onboarding — cliente novo (ainda sem consentimento LGPD registrado)
-  // ---------------------------------------------------------------------
-
-  private async stepOnboarding(clientId: string, state: ConversationState, text: string): Promise<ConversationState> {
-    const conversation = await this.prisma.conversation.findFirst({ where: { clientId } });
-    if (!conversation) return state;
-
-    if (state.step !== ConversationStep.ONBOARDING_ASK_NAME && state.step !== ConversationStep.ONBOARDING_ASK_CONSENT) {
-      await this.reply(
-        conversation.id,
-        'Oi! Que bom te ver por aqui. 😊 Antes de começar, qual é o seu nome?',
-      );
-      return freshState(ConversationStep.ONBOARDING_ASK_NAME);
-    }
-
-    if (state.step === ConversationStep.ONBOARDING_ASK_NAME) {
-      if (!text) {
-        await this.reply(conversation.id, 'Pode me dizer seu nome, por favor?');
-        return state;
-      }
-      await this.reply(
-        conversation.id,
-        `Prazer, ${text}! Para agendar e receber lembretes por aqui, preciso da sua confirmação: você concorda em ser contatada por WhatsApp para agendamentos? (responda "sim" para confirmar)`,
-      );
-      return freshState(ConversationStep.ONBOARDING_ASK_CONSENT, { pendingName: text });
-    }
-
-    // ONBOARDING_ASK_CONSENT
-    if (/^sim/i.test(text)) {
-      await this.clientsService.setName(clientId, state.data.pendingName ?? 'Cliente');
-      await this.clientsService.setConsent(clientId, 'whatsappConsent', true);
-      return this.stepMenu(clientId, '', conversation.id);
-    }
-    await this.reply(
-      conversation.id,
-      'Sem o seu "sim" não consigo agendar por aqui, mas fico à disposição se mudar de ideia. 🙂',
-    );
-    return state;
-  }
-
-  // ---------------------------------------------------------------------
-  // Menu principal
+  // Menu principal — canal oficial (ver docs/03-fluxos-whatsapp.md)
   // ---------------------------------------------------------------------
 
   private async stepMenu(clientId: string, text: string, conversationIdParam?: string): Promise<ConversationState> {
@@ -157,42 +153,37 @@ export class ConversationEngineService {
       conversationIdParam ?? (await this.prisma.conversation.findFirst({ where: { clientId } }))?.id;
     if (!conversation) return freshState(ConversationStep.MENU);
 
-    let choice = text.trim();
+    const choice = text.trim();
 
-    // Assistente de IA (opcional, ver NluService): interpreta linguagem
-    // natural e mapeia para a mesma escolha numérica do menu — o motor
-    // determinístico abaixo não muda, só ganha um parser melhor na entrada.
-    const nluResult = await this.nlu.classify(text);
-    if (nluResult && nluResult.confidence >= 0.6 && nluResult.intent !== 'UNKNOWN') {
-      const intentToChoice: Record<string, string> = {
-        SCHEDULE: '1',
-        RESCHEDULE: '2',
-        CANCEL: '3',
-        HUMAN: '4',
-      };
-      choice = intentToChoice[nluResult.intent] ?? choice;
+    if (choice === '1' || /falar com a luana|atendente|consultora/i.test(choice)) {
+      await this.reply(conversation, TALK_TO_LUANA_TEXT);
+      return freshState(ConversationStep.TALK_TO_LUANA_AWAIT_MESSAGE);
     }
-
-    if (choice === '1' || /agendar/i.test(choice)) {
-      return this.startSchedule(conversation);
+    if (choice === '2' || /m[ée]todo|look pronto/i.test(choice)) {
+      await this.reply(conversation, METHOD_TEXT);
+      return freshState(ConversationStep.METHOD_AWAIT_ANSWERS);
     }
-    if (choice === '2' || /remarcar/i.test(choice)) {
-      return this.startReschedule(clientId, conversation);
+    if (choice === '3' || /comunidade/i.test(choice)) {
+      await this.reply(conversation, COMMUNITY_TEXT);
+      return freshState(ConversationStep.MENU);
     }
-    if (choice === '3' || /cancelar/i.test(choice)) {
-      return this.startCancel(clientId, conversation);
+    if (choice === '4' || /j[áa] sou cliente/i.test(choice)) {
+      await this.reply(conversation, EXISTING_CLIENT_TEXT);
+      return freshState(ConversationStep.EXISTING_CLIENT_AWAIT_MESSAGE);
     }
-    if (choice === '4' || /human|atendente|consultora/i.test(choice)) {
-      await this.prisma.conversation.update({ where: { id: conversation }, data: { needsHuman: true } });
-      await this.reply(conversation, 'Combinado, já avisei a equipe. Alguém vai te responder por aqui em breve! 💬');
-      return freshState(ConversationStep.HUMAN_HANDOFF);
+    if (choice === '5' || /outro assunto/i.test(choice)) {
+      await this.reply(conversation, OTHER_SUBJECT_TEXT);
+      return freshState(ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE);
     }
 
-    await this.reply(
-      conversation,
-      'Não entendi 🙂 Escolha uma opção:\n1) Agendar\n2) Remarcar\n3) Cancelar\n4) Falar com a consultora',
-    );
+    await this.reply(conversation, WELCOME_MENU_TEXT);
     return freshState(ConversationStep.MENU);
+  }
+
+  /** Marca a conversa como aguardando resposta humana — usado pelas 4 opções do menu que terminam em "retornaremos". */
+  private async handoffToHuman(conversationId: string): Promise<ConversationState> {
+    await this.prisma.conversation.update({ where: { id: conversationId }, data: { needsHuman: true } });
+    return freshState(ConversationStep.HUMAN_HANDOFF);
   }
 
   private async routeStep(clientId: string, state: ConversationState, text: string): Promise<ConversationState> {
@@ -200,6 +191,14 @@ export class ConversationEngineService {
     if (!conversation) return state;
 
     switch (state.step) {
+      case ConversationStep.TALK_TO_LUANA_AWAIT_MESSAGE:
+      case ConversationStep.METHOD_AWAIT_ANSWERS:
+      case ConversationStep.EXISTING_CLIENT_AWAIT_MESSAGE:
+      case ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE:
+        // A mensagem já foi salva pelo handleIncoming — só falta marcar que
+        // precisa de atenção humana. O texto de cada opção já avisou que a
+        // resposta vem "assim que possível", então o bot não replica nada aqui.
+        return this.handoffToHuman(conversation.id);
       case ConversationStep.SCHEDULE_CHOOSE_SERVICE:
         return this.scheduleChooseService(conversation.id, state, text);
       case ConversationStep.SCHEDULE_CHOOSE_LOCATION:

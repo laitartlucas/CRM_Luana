@@ -26,6 +26,12 @@ export interface MessageTemplateMeta {
   default: string;
 }
 
+export interface CustomMessageTemplate {
+  id: string;
+  label: string;
+  text: string;
+}
+
 export interface Service {
   id: string;
   name: string;

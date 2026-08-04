@@ -46,15 +46,21 @@ export class ClientsService {
 
   /**
    * Usado pelo motor de conversa ao receber a primeira mensagem de um
-   * número novo. Não marca consentimento automaticamente — o fluxo de
-   * onboarding (ver ConversationEngineService) pergunta o nome e confirma
-   * o consentimento LGPD antes de liberar o menu principal.
+   * número novo. O canal oficial não pergunta mais nome/consentimento
+   * separadamente (ver ConversationEngineService) — aproveita o nome de
+   * perfil do WhatsApp, se vier no webhook, e já marca o consentimento de
+   * contato por WhatsApp, já que é a própria pessoa iniciando a conversa.
    */
-  async findOrCreateByPhone(phoneE164: string) {
+  async findOrCreateByPhone(phoneE164: string, profileName?: string) {
     const existing = await this.findByPhone(phoneE164);
     if (existing) return existing;
     return this.prisma.client.create({
-      data: { phoneE164, name: '' },
+      data: {
+        phoneE164,
+        name: profileName?.trim() || '',
+        whatsappConsent: true,
+        whatsappConsentAt: new Date(),
+      },
     });
   }
 
