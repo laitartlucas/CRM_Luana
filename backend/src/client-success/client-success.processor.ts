@@ -3,6 +3,8 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappOutboundService } from '../whatsapp/whatsapp-outbound.service';
+import { resolveMessageTemplate } from '../whatsapp/message-templates';
+import { UsersService } from '../users/users.service';
 import { CLIENT_SUCCESS_QUEUE } from './queue.constants';
 
 @Processor(CLIENT_SUCCESS_QUEUE)
@@ -12,6 +14,7 @@ export class ClientSuccessProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbound: WhatsappOutboundService,
+    private readonly usersService: UsersService,
   ) {
     super();
   }
@@ -30,9 +33,10 @@ export class ClientSuccessProcessor extends WorkerHost {
     // Só envia se ainda estiver "Encerramento" — se já virou Renovação/Indicação
     // ou saiu do módulo Sucesso do Cliente entretanto, o lembrete não faz sentido.
     if (!client || client.successStage !== 'CLOSED') return;
-    await this.outbound.sendToClient(
-      clientId,
-      `Oi ${client.name}! Faz um tempinho desde nossa última consultoria — como estão os looks? Topa revisar seu guarda-roupa ou já pensou em indicar alguém pra gente? 💛`,
-    );
+    const professional = await this.usersService.getDefaultProfessional();
+    const text = resolveMessageTemplate('renewalReminder', professional.messageTemplates as any, {
+      cliente: client.name ?? '',
+    });
+    await this.outbound.sendToClient(clientId, text);
   }
 }

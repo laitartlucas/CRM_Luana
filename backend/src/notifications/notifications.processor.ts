@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { formatInTimeZone } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsappOutboundService } from '../whatsapp/whatsapp-outbound.service';
+import { resolveMessageTemplate } from '../whatsapp/message-templates';
 import { NOTIFICATIONS_QUEUE } from './queue.constants';
 
 @Processor(NOTIFICATIONS_QUEUE)
@@ -41,13 +42,15 @@ export class NotificationsProcessor extends WorkerHost {
     const appointment = await this.loadAppointment(appointmentId);
     if (!appointment || !['SCHEDULED', 'CONFIRMED'].includes(appointment.status)) return;
 
-    const when = formatInTimeZone(appointment.startAt, appointment.professional.timezone, "dd/MM 'às' HH:mm");
-    const text =
-      hoursBefore === 24
-        ? `Lembrete: você tem "${appointment.service.name}" amanhã, ${when}. Confirma?\n1) Confirmar\n2) Remarcar`
-        : hoursBefore === 3
-          ? `Não esqueça: "${appointment.service.name}" hoje às ${when.split(' ').pop()}. Confirma sua presença?\n1) Confirmar\n2) Remarcar`
-          : `Falta 1h para "${appointment.service.name}" (${when}). Te espero! Se precisar, digite "2" para remarcar.`;
+    const tz = appointment.professional.timezone;
+    const vars = {
+      cliente: appointment.client.name ?? '',
+      servico: appointment.service.name,
+      data: formatInTimeZone(appointment.startAt, tz, 'dd/MM'),
+      hora: formatInTimeZone(appointment.startAt, tz, 'HH:mm'),
+    };
+    const key = hoursBefore === 24 ? 'reminder24h' : hoursBefore === 3 ? 'reminder3h' : 'reminder1h';
+    const text = resolveMessageTemplate(key, appointment.professional.messageTemplates as any, vars);
 
     await this.outbound.sendToClient(appointment.clientId, text);
     // O lembrete extra de risco alto (3h) não tem coluna própria — só o
@@ -61,18 +64,20 @@ export class NotificationsProcessor extends WorkerHost {
   private async sendPostServiceFollowUp(appointmentId: string) {
     const appointment = await this.loadAppointment(appointmentId);
     if (!appointment || appointment.status !== 'COMPLETED') return;
-    await this.outbound.sendToClient(
-      appointment.clientId,
-      `Oi ${appointment.client.name}! Como foi sua experiência com os looks de "${appointment.service.name}"? Conta pra gente 💛`,
-    );
+    const text = resolveMessageTemplate('postServiceFollowUp', appointment.professional.messageTemplates as any, {
+      cliente: appointment.client.name ?? '',
+      servico: appointment.service.name,
+    });
+    await this.outbound.sendToClient(appointment.clientId, text);
   }
 
   private async sendNoShowReengagement(appointmentId: string) {
     const appointment = await this.loadAppointment(appointmentId);
     if (!appointment || appointment.status !== 'NO_SHOW') return;
-    await this.outbound.sendToClient(
-      appointment.clientId,
-      `Oi ${appointment.client.name}, sentimos sua falta no horário de "${appointment.service.name}". Quer remarcar? Digite "2" para ver novos horários.`,
-    );
+    const text = resolveMessageTemplate('noShowReengagement', appointment.professional.messageTemplates as any, {
+      cliente: appointment.client.name ?? '',
+      servico: appointment.service.name,
+    });
+    await this.outbound.sendToClient(appointment.clientId, text);
   }
 }

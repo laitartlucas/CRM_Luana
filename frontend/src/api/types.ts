@@ -8,6 +8,23 @@ export interface CurrentUser {
   timezone: string;
 }
 
+export type MessageTemplateKey =
+  | 'reminder24h'
+  | 'reminder3h'
+  | 'reminder1h'
+  | 'postServiceFollowUp'
+  | 'noShowReengagement'
+  | 'renewalReminder';
+
+export type MessageTemplates = Record<MessageTemplateKey, string>;
+
+export interface MessageTemplateMeta {
+  label: string;
+  description: string;
+  variables: string[];
+  default: string;
+}
+
 export interface Service {
   id: string;
   name: string;

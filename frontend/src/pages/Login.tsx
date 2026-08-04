@@ -32,28 +32,48 @@ export default function Login() {
   }
 
   return (
-    <div className="centered-page">
-      <form className="card login-card" onSubmit={handleSubmit}>
-        <h1>CRM de Estilo</h1>
-        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-          Entre com seu usuário e senha.
-        </p>
-        <label className="field">
-          Usuário
-          <input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
-        </label>
-        <label className="field">
-          Senha
-          <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
-        {error && <span className="error-text">{error}</span>}
-        <button className="btn" type="submit" disabled={loading}>
-          {loading ? 'Entrando...' : 'Entrar'}
-        </button>
-        <a href="/api/auth/google" style={{ textAlign: 'center', fontSize: '0.85rem' }}>
-          ou entrar com Google
-        </a>
-      </form>
+    <div className="login-shell">
+      <div className="login-brand-panel">
+        <div className="login-brand-eyebrow">LUANA LAITART</div>
+        <div className="login-brand-center">
+          <img src="/logo.png" alt="Luana Laitart" />
+          <div>
+            <div className="login-brand-title">
+              Consultoria de imagem
+              <br />
+              &amp; estilo pessoal
+            </div>
+            <div className="login-brand-subtitle">Elegância que começa na organização.</div>
+          </div>
+        </div>
+        <div className="login-brand-footer">
+          <span>© {new Date().getFullYear()} Luana Laitart</span>
+          <span>luanalaitart.com</span>
+        </div>
+      </div>
+      <div className="login-form-panel">
+        <form className="login-form-card" onSubmit={handleSubmit}>
+          <div>
+            <h1>Bem-vinda de volta</h1>
+            <p className="subtitle">Acesse seu ateliê de clientes e consultorias.</p>
+          </div>
+          <label className="field">
+            <span>E-mail</span>
+            <input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Senha</span>
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+          </label>
+          {error && <span className="error-text">{error}</span>}
+          <button className="btn" type="submit" disabled={loading} style={{ height: 52 }}>
+            {loading ? 'ENTRANDO...' : 'ENTRAR'}
+          </button>
+          <a href="/api/auth/google" style={{ textAlign: 'center', fontSize: '0.85rem' }}>
+            ou entrar com Google
+          </a>
+        </form>
+      </div>
     </div>
   );
 }

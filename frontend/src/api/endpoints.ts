@@ -8,6 +8,8 @@ import type {
   FunnelReport,
   FunnelStageEvent,
   LeadSource,
+  MessageTemplateMeta,
+  MessageTemplates,
   OriginReportEntry,
   PipelineBoard,
   PipelineMetrics,
@@ -159,4 +161,11 @@ export const WhatsappApi = {
     api.post('/whatsapp/simulate/inbound', { phoneE164, text }),
   evolutionStatus: () => api.get<{ connected: boolean; state: string }>('/whatsapp/evolution/status'),
   evolutionConnect: () => api.post<{ qrCodeBase64: string | null }>('/whatsapp/evolution/connect'),
+};
+
+export const UsersApi = {
+  getMessageTemplates: () =>
+    api.get<{ templates: MessageTemplates; meta: Record<string, MessageTemplateMeta> }>('/users/me/message-templates'),
+  updateMessageTemplates: (data: Partial<MessageTemplates>) =>
+    api.put<{ templates: MessageTemplates; meta: Record<string, MessageTemplateMeta> }>('/users/me/message-templates', data),
 };
