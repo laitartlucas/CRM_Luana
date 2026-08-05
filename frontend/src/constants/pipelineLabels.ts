@@ -80,3 +80,13 @@ export const LEAD_SOURCE_ORDER: LeadSource[] = [
 
 // Origens cujo conteúdo específico (link/descrição) importa cruzar com conversão.
 export const CONTENT_LEAD_SOURCES: LeadSource[] = ['REEL', 'CAROUSEL', 'STORY'];
+
+// Precisa bater com backend/src/clients/payment-methods.ts (validação do DTO).
+export const PAYMENT_METHOD_OPTIONS = [
+  'Pix',
+  'Cartão de crédito',
+  'Cartão de débito',
+  'Dinheiro',
+  'Boleto',
+  'Outro',
+];

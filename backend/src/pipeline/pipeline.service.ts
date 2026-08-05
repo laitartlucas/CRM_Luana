@@ -232,13 +232,20 @@ export class PipelineService {
 
     const closedWon = await this.prisma.client.findMany({
       where: { pipelineStage: PipelineStage.CLOSED_WON },
-      select: { proposalValue: true, paymentMethod: true },
+      select: { proposalValue: true },
     });
     const values = closedWon.map((c) => Number(c.proposalValue ?? 0)).filter((v) => v > 0);
     const averageTicket = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
 
+    // Forma de pagamento é preenchida na ficha da cliente (Módulo 3), não no
+    // card do Pipeline — por isso soma sobre quem já é "Cliente" (funnelStage),
+    // não sobre quem fechou o Pipeline (nem todo Cliente passou pelo Pipeline).
+    const clientsWithPayment = await this.prisma.client.findMany({
+      where: { funnelStage: FunnelStage.CLIENT, paymentMethod: { not: null } },
+      select: { paymentMethod: true },
+    });
     const paymentCounts = new Map<string, number>();
-    for (const c of closedWon) {
+    for (const c of clientsWithPayment) {
       if (!c.paymentMethod) continue;
       paymentCounts.set(c.paymentMethod, (paymentCounts.get(c.paymentMethod) ?? 0) + 1);
     }

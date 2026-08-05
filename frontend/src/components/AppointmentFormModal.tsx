@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Modal } from './Modal';
-import { AppointmentsApi, CatalogApi, ClientsApi } from '../api/endpoints';
+import { AppointmentsApi, CatalogApi, ClientsApi, LeadsApi } from '../api/endpoints';
 import type { Client, Service } from '../api/types';
+
+type PersonResult = Client & { _kind: 'CLIENTE' | 'LEAD' };
 
 export function AppointmentFormModal({
   professionalId,
@@ -19,8 +21,8 @@ export function AppointmentFormModal({
   const [location, setLocation] = useState<'PRESENCIAL' | 'ONLINE'>('PRESENCIAL');
 
   const [clientSearch, setClientSearch] = useState('');
-  const [clientResults, setClientResults] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientResults, setClientResults] = useState<PersonResult[]>([]);
+  const [selectedClient, setSelectedClient] = useState<PersonResult | null>(null);
   const [newClientMode, setNewClientMode] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
@@ -45,7 +47,14 @@ export function AppointmentFormModal({
       return;
     }
     const timeout = setTimeout(() => {
-      ClientsApi.list(clientSearch).then((res) => setClientResults(res.data));
+      Promise.all([ClientsApi.list(clientSearch), LeadsApi.list({ search: clientSearch })]).then(
+        ([clients, leads]) => {
+          setClientResults([
+            ...clients.data.map((c) => ({ ...c, _kind: 'CLIENTE' as const })),
+            ...leads.data.map((l) => ({ ...l, _kind: 'LEAD' as const })),
+          ]);
+        },
+      );
     }, 250);
     return () => clearTimeout(timeout);
   }, [clientSearch]);
@@ -115,14 +124,17 @@ export function AppointmentFormModal({
 
   return (
     <Modal title="Novo agendamento" onClose={onClose}>
-      <label className="field">
-        Cliente
+      <div className="field">
+        <span>Cliente ou lead</span>
         {selectedClient ? (
           <div className="appointment-row">
             <span>
+              <span className={`badge ${selectedClient._kind === 'LEAD' ? 'SCHEDULED' : 'CONFIRMED'}`} style={{ marginRight: '0.4rem' }}>
+                {selectedClient._kind === 'LEAD' ? 'Lead' : 'Cliente'}
+              </span>
               {selectedClient.name} ({selectedClient.phoneE164})
             </span>
-            <button className="btn-link" onClick={() => setSelectedClient(null)}>
+            <button type="button" className="btn-link" onClick={() => setSelectedClient(null)}>
               trocar
             </button>
           </div>
@@ -136,14 +148,22 @@ export function AppointmentFormModal({
             {clientResults.length > 0 && (
               <div className="slot-options">
                 {clientResults.map((c) => (
-                  <button key={c.id} className="slot-option" onClick={() => setSelectedClient(c)}>
+                  <button
+                    key={`${c._kind}-${c.id}`}
+                    type="button"
+                    className="slot-option"
+                    onClick={() => setSelectedClient(c)}
+                  >
+                    <span className={`badge ${c._kind === 'LEAD' ? 'SCHEDULED' : 'CONFIRMED'}`} style={{ marginRight: '0.4rem' }}>
+                      {c._kind === 'LEAD' ? 'Lead' : 'Cliente'}
+                    </span>
                     {c.name} — {c.phoneE164}
                   </button>
                 ))}
               </div>
             )}
             {clientSearch.length >= 2 && clientResults.length === 0 && !newClientMode && (
-              <button className="btn-link" onClick={() => setNewClientMode(true)}>
+              <button type="button" className="btn-link" onClick={() => setNewClientMode(true)}>
                 + cadastrar nova cliente "{clientSearch}"
               </button>
             )}
@@ -159,7 +179,7 @@ export function AppointmentFormModal({
             )}
           </>
         )}
-      </label>
+      </div>
 
       <label className="field">
         Serviço
@@ -185,7 +205,7 @@ export function AppointmentFormModal({
         <div className="field">
           <div className="appointment-row">
             <span>Horário</span>
-            <button className="btn-link" onClick={() => toggleManualEntry(!manualEntry)}>
+            <button type="button" className="btn-link" onClick={() => toggleManualEntry(!manualEntry)}>
               {manualEntry ? 'ver horários sugeridos' : 'digitar data e horário manualmente'}
             </button>
           </div>
@@ -203,6 +223,7 @@ export function AppointmentFormModal({
                 {slots.map((iso) => (
                   <button
                     key={iso}
+                    type="button"
                     className={`slot-option ${selectedSlot === iso ? 'selected' : ''}`}
                     onClick={() => setSelectedSlot(iso)}
                   >
@@ -218,10 +239,10 @@ export function AppointmentFormModal({
       {error && <span className="error-text">{error}</span>}
 
       <div className="modal-actions">
-        <button className="btn secondary" onClick={onClose}>
+        <button type="button" className="btn secondary" onClick={onClose}>
           Cancelar
         </button>
-        <button className="btn" onClick={handleSubmit} disabled={submitting}>
+        <button type="button" className="btn" onClick={handleSubmit} disabled={submitting}>
           {submitting ? 'Salvando...' : 'Agendar'}
         </button>
       </div>

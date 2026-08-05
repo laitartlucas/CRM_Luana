@@ -2,7 +2,7 @@ import { ChangeEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ClientsApi, ClientSuccessApi } from '../api/endpoints';
 import type { Appointment, Client, ClientMedia, SuccessStage } from '../api/types';
-import { SUCCESS_STAGE_LABELS, SUCCESS_STAGE_ORDER } from '../constants/pipelineLabels';
+import { PAYMENT_METHOD_OPTIONS, SUCCESS_STAGE_LABELS, SUCCESS_STAGE_ORDER } from '../constants/pipelineLabels';
 import { SendMessageModal } from '../components/SendMessageModal';
 
 const STYLE_FIELDS: Array<{ key: keyof Client; label: string }> = [
@@ -52,6 +52,7 @@ export default function ClientDetail() {
         notes: client.notes,
         name: client.name,
         email: client.email,
+        paymentMethod: client.paymentMethod,
       });
     } finally {
       setSaving(false);
@@ -133,6 +134,20 @@ export default function ClientDetail() {
             <label className="field">
               E-mail
               <input value={client.email ?? ''} onChange={(e) => updateField('email', e.target.value)} />
+            </label>
+            <label className="field">
+              Forma de pagamento
+              <select
+                value={client.paymentMethod ?? ''}
+                onChange={(e) => updateField('paymentMethod', e.target.value)}
+              >
+                <option value="">Não informado</option>
+                {PAYMENT_METHOD_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
             {STYLE_FIELDS.map((f) => (
               <label className="field" key={f.key}>

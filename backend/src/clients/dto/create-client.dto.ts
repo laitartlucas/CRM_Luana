@@ -3,12 +3,14 @@ import {
   IsBoolean,
   IsDateString,
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPhoneNumber,
   IsString,
 } from 'class-validator';
+import { PAYMENT_METHOD_OPTIONS } from '../payment-methods';
 
 export class CreateClientDto {
   @IsString()
@@ -62,4 +64,8 @@ export class CreateClientDto {
   @IsOptional()
   @IsBoolean()
   marketingConsent?: boolean;
+
+  @IsOptional()
+  @IsIn(PAYMENT_METHOD_OPTIONS)
+  paymentMethod?: string;
 }
