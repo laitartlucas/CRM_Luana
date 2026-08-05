@@ -183,12 +183,16 @@ export class RespondiImportService {
       } else if (PROFESSION_KEYS.includes(key)) {
         result.profession = value;
       } else if (/dificuldade|\bdor(es)?\b/.test(key)) {
-        painPoints.push(`${question}\n${value}`);
+        // Só a resposta — o campo "Principais dores" já dá o contexto, não
+        // precisa repetir a pergunta original do questionário.
+        painPoints.push(value);
       } else if (/deseja|gostaria/.test(key)) {
-        desires.push(`${question}\n${value}`);
+        desires.push(value);
       } else if (/custar|medo|receio|objec/.test(key)) {
-        objections.push(`${question}\n${value}`);
+        objections.push(value);
       } else {
+        // "Observações gerais" junta perguntas soltas sem um campo próprio —
+        // aqui a pergunta continua junto, senão a resposta perde o contexto.
         notes.push(`${question}\n${value}`);
       }
     }

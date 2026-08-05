@@ -210,8 +210,6 @@ input:focus, select:focus, textarea:focus {
   flex: 1;
   padding: 2.25rem 2.5rem;
   width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
 }
 
 /* Login */

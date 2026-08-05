@@ -62,12 +62,15 @@ export function parseRespondiHtml(html: string): ParsedRespondiLead {
     } else if (PROFESSION_KEYS.includes(key)) {
       result.profession = answer;
     } else if (/dificuldade|\bdor(es)?\b/.test(key)) {
-      result.painPoints.push(`${question}\n${answer}`);
+      // Só a resposta — o campo já dá o contexto, não precisa repetir a pergunta.
+      result.painPoints.push(answer);
     } else if (/deseja|gostaria/.test(key)) {
-      result.desires.push(`${question}\n${answer}`);
+      result.desires.push(answer);
     } else if (/custar|medo|receio|objec/.test(key)) {
-      result.objections.push(`${question}\n${answer}`);
+      result.objections.push(answer);
     } else {
+      // "Observações gerais" junta perguntas soltas sem campo próprio — aqui
+      // a pergunta continua junto, senão a resposta perde o contexto.
       result.notes.push(`${question}\n${answer}`);
     }
   }
