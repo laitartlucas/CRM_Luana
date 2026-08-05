@@ -37,7 +37,10 @@ Descubra como a mentoria pode transformar a forma como você se veste e se posic
 Veja como funciona e faça parte dela gratuitamente.
 
 4️⃣ Outro assunto
-Escreva sua mensagem e retornaremos o mais breve possível.`;
+Escreva sua mensagem e retornaremos o mais breve possível.
+
+5️⃣ Voltar ao menu inicial
+Digite a qualquer momento para reiniciar o atendimento.`;
 
 const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo. 🤎
 
@@ -83,10 +86,6 @@ Seja muito bem-vinda, espero você por lá.`;
 const OTHER_SUBJECT_TEXT = `Perfeito! Escreva sua mensagem e, assim que possível, retornaremos para ajudar você da melhor forma.`;
 
 const OTHER_SUBJECT_ACK_TEXT = `Recebido! Nossa equipe já foi avisada e vai te responder por aqui assim que possível. 🤎`;
-
-// Resposta breve enquanto a conversa está aguardando atendimento humano —
-// nunca reabre o menu nem improvisa, só confirma o recebimento (regra 4).
-const HUMAN_HANDOFF_ACK_TEXT = `Recebido! Já estamos com sua mensagem, aguarde só um instante 🤎`;
 
 @Injectable()
 export class ConversationEngineService {
@@ -186,9 +185,9 @@ export class ConversationEngineService {
     await this.outbound.sendToConversation(conversationId, text);
   }
 
-  /** "menu", "voltar", "início" — pedido explícito pra sair do fluxo atual e voltar ao menu (regra 2b). */
+  /** "5" (opção do menu), "menu", "voltar", "início" — pedido explícito pra sair do fluxo atual e voltar ao menu (regra 2b). */
   private isBackToMenuCommand(text: string): boolean {
-    return /^(menu|voltar|in[ií]cio)$/i.test(text.trim());
+    return /^(5|menu|voltar|in[ií]cio)$/i.test(text.trim());
   }
 
   // ---------------------------------------------------------------------
@@ -269,10 +268,11 @@ export class ConversationEngineService {
       case ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE:
         return this.handoffToHuman(conversation.id, OTHER_SUBJECT_ACK_TEXT);
       case ConversationStep.HUMAN_HANDOFF:
-        // Enquanto aguarda atendimento humano, só reconhece a mensagem —
-        // nunca reabre o menu nem improvisa uma resposta (regra 4).
-        await this.reply(conversation.id, HUMAN_HANDOFF_ACK_TEXT);
-        return freshState(ConversationStep.HUMAN_HANDOFF);
+        // A confirmação já foi mandada uma vez ao entrar nesse estado (ver
+        // handoffToHuman) — mensagens seguintes só ficam salvas (já feito em
+        // handleIncoming), sem responder de novo, pra não repetir o mesmo
+        // aviso a cada mensagem enquanto a lead espera atendimento humano.
+        return state;
       case ConversationStep.SCHEDULE_CHOOSE_SERVICE:
         return this.scheduleChooseService(conversation.id, state, text);
       case ConversationStep.SCHEDULE_CHOOSE_LOCATION:
