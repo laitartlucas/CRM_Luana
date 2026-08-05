@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarSyncApi, ClientsApi, UsersApi, WhatsappApi } from '../api/endpoints';
 import type { CustomMessageTemplate, MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { useProfessional } from '../hooks/useProfessional';
 
 const WIPE_CONFIRMATION_PHRASE = 'APAGAR TUDO';
 
@@ -18,7 +17,6 @@ const TEMPLATE_ORDER: MessageTemplateKey[] = [
 ];
 
 export default function Settings() {
-  const { professional } = useProfessional();
   const { user } = useAuth();
   const [params] = useSearchParams();
   const [wipeInput, setWipeInput] = useState('');
@@ -155,8 +153,12 @@ export default function Settings() {
   }
 
   function loadHealth() {
-    if (!professional) return;
-    CalendarSyncApi.health(professional.id).then((res) => setHealth(res.data));
+    // Usa o usuário logado (não "a primeira profissional" de useProfessional) —
+    // a conexão do Google fica vinculada a quem de fato autenticou no OAuth
+    // (calendar-sync.controller.ts usa @CurrentUser() lá), então o status
+    // exibido aqui precisa checar essa mesma identidade.
+    if (!user) return;
+    CalendarSyncApi.health(user.id).then((res) => setHealth(res.data));
   }
 
   async function handleGcalImport() {
@@ -189,7 +191,7 @@ export default function Settings() {
     }
   }
 
-  useEffect(loadHealth, [professional]);
+  useEffect(loadHealth, [user]);
 
   function loadEvoStatus() {
     WhatsappApi.evolutionStatus()
