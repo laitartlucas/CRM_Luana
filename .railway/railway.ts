@@ -66,11 +66,16 @@ export default defineRailway(() => {
       EVOLUTION_PROXY_USERNAME: preserve(),
       EVOLUTION_PROXY_PASSWORD: preserve(),
       // Google Calendar — criar credenciais OAuth2 em console.cloud.google.com
-      // (ativar "Google Calendar API"). Redirect URI a cadastrar lá:
-      // https://backend-production-2a762.up.railway.app/calendar-sync/oauth/callback
+      // (ativar "Google Calendar API"). Redirect URI a cadastrar lá (precisa
+      // ser exatamente esta, passando pelo proxy /api do frontend — "connect"
+      // exige o cookie de sessão/login, que só existe no domínio do frontend,
+      // e o cookie de estado do OAuth precisa da mesma origem nas duas pontas):
+      // https://frontend-production-b7629.up.railway.app/api/calendar-sync/oauth/callback
       GOOGLE_CALENDAR_CLIENT_ID: preserve(),
       GOOGLE_CALENDAR_CLIENT_SECRET: preserve(),
-      GOOGLE_CALENDAR_REDIRECT_URI: "https://backend-production-2a762.up.railway.app/calendar-sync/oauth/callback",
+      GOOGLE_CALENDAR_REDIRECT_URI: "https://frontend-production-b7629.up.railway.app/api/calendar-sync/oauth/callback",
+      // Webhook é server-to-server (Google chamando a gente) — sem cookie
+      // envolvido, então esse continua batendo direto no backend.
       GOOGLE_CALENDAR_WEBHOOK_URL: "https://backend-production-2a762.up.railway.app/calendar-sync/webhook",
       DEFAULT_TIMEZONE: "America/Sao_Paulo",
       LATE_CANCEL_HOURS: "12",
@@ -89,11 +94,6 @@ export default defineRailway(() => {
     source: github("laitartlucas/CRM_Luana", { branch: "main", rootDirectory: "frontend" }),
     env: {
       VITE_API_URL: preserve(),
-      // Domínio direto do backend, sem passar pelo proxy /api — precisa bater
-      // com GOOGLE_CALENDAR_REDIRECT_URI no serviço "backend" acima, senão o
-      // cookie de estado do OAuth do Google Calendar não sobrevive ao
-      // redirect de volta (erro "sessão de autorização expirada").
-      VITE_API_PUBLIC_URL: preserve(),
     },
   });
 

@@ -153,12 +153,12 @@ export const DashboardApi = {
 };
 
 export const CalendarSyncApi = {
-  // Precisa ser o domínio direto do backend (não o proxy /api do frontend):
-  // o Google redireciona de volta pro GOOGLE_CALENDAR_REDIRECT_URI, que
-  // também é o domínio direto do backend — se o "connect" passasse pelo
-  // proxy, o cookie de estado da autorização ficaria salvo no domínio do
-  // frontend e nunca voltaria no callback (sempre "sessão expirada").
-  connectUrl: () => `${import.meta.env.VITE_API_PUBLIC_URL ?? api.defaults.baseURL ?? ''}/calendar-sync/oauth/connect`,
+  // Precisa passar pelo proxy /api (same-origin com o frontend), igual o
+  // resto da SPA: "connect" exige o cookie de sessão (login), que só existe
+  // no domínio do frontend. GOOGLE_CALENDAR_REDIRECT_URI no backend também
+  // aponta pra essa mesma URL proxied, pra o cookie de estado do OAuth
+  // sobreviver ao redirect de volta do Google (mesma origem nas duas pontas).
+  connectUrl: () => `${(api.defaults.baseURL ?? '')}/calendar-sync/oauth/connect`,
   health: (professionalId: string) =>
     api.get<{ connected: boolean; lastSyncAt?: string; lastSyncError?: string | null }>(
       `/calendar-sync/health/${professionalId}`,
