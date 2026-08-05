@@ -89,6 +89,11 @@ export default defineRailway(() => {
     source: github("laitartlucas/CRM_Luana", { branch: "main", rootDirectory: "frontend" }),
     env: {
       VITE_API_URL: preserve(),
+      // Domínio direto do backend, sem passar pelo proxy /api — precisa bater
+      // com GOOGLE_CALENDAR_REDIRECT_URI no serviço "backend" acima, senão o
+      // cookie de estado do OAuth do Google Calendar não sobrevive ao
+      // redirect de volta (erro "sessão de autorização expirada").
+      VITE_API_PUBLIC_URL: preserve(),
     },
   });
 

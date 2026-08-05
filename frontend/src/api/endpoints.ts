@@ -153,7 +153,12 @@ export const DashboardApi = {
 };
 
 export const CalendarSyncApi = {
-  connectUrl: () => `${(api.defaults.baseURL ?? '')}/calendar-sync/oauth/connect`,
+  // Precisa ser o domínio direto do backend (não o proxy /api do frontend):
+  // o Google redireciona de volta pro GOOGLE_CALENDAR_REDIRECT_URI, que
+  // também é o domínio direto do backend — se o "connect" passasse pelo
+  // proxy, o cookie de estado da autorização ficaria salvo no domínio do
+  // frontend e nunca voltaria no callback (sempre "sessão expirada").
+  connectUrl: () => `${import.meta.env.VITE_API_PUBLIC_URL ?? api.defaults.baseURL ?? ''}/calendar-sync/oauth/connect`,
   health: (professionalId: string) =>
     api.get<{ connected: boolean; lastSyncAt?: string; lastSyncError?: string | null }>(
       `/calendar-sync/health/${professionalId}`,
