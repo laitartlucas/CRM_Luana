@@ -21,14 +21,13 @@ interface IncomingMessage {
   mediaSavedUrl?: string; // já baixada e salva em disco pelo controller, se houver
 }
 
-// Texto do menu principal do canal oficial — mostrado sempre que a
-// conversa entra/reentra em ConversationStep.MENU (primeiro contato,
-// timeout de inatividade, ou escolha não reconhecida).
-const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo. 🤎
-
-Para direcionar você da melhor forma, responda com o número da opção desejada:
-
-1️⃣ Falar com a Luana
+// Lista de opções do menu, reaproveitada nos três textos abaixo — a saudação
+// completa (WELCOME_MENU_TEXT) só deve ser usada no primeiro contato ou no
+// retorno após >24h de inatividade (ver regra em isStale/handleIncoming).
+// Fora isso, uma escolha não reconhecida NUNCA deve reenviar a saudação —
+// só a lista de opções, com um pedido de esclarecimento (MENU_CLARIFICATION_TEXT)
+// ou, quando pedido explicitamente ("menu"/"voltar"/"início"), o BACK_TO_MENU_TEXT.
+const MENU_OPTIONS_TEXT = `1️⃣ Falar com a Luana
 Atendimento, suporte e dúvidas.
 
 2️⃣ Conhecer o Método Look Pronto
@@ -40,9 +39,25 @@ Veja como funciona e faça parte dela gratuitamente.
 4️⃣ Outro assunto
 Escreva sua mensagem e retornaremos o mais breve possível.`;
 
+const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo. 🤎
+
+Para direcionar você da melhor forma, responda com o número da opção desejada:
+
+${MENU_OPTIONS_TEXT}`;
+
+const MENU_CLARIFICATION_TEXT = `Não entendi muito bem 🤔 Pode responder só com o número de uma das opções abaixo?
+
+${MENU_OPTIONS_TEXT}`;
+
+const BACK_TO_MENU_TEXT = `Claro! Voltando ao menu principal:
+
+${MENU_OPTIONS_TEXT}`;
+
 const TALK_TO_LUANA_TEXT = `Que bom ter você por aqui!
 
 Para que eu possa entender melhor como te ajudar, me conte brevemente qual é o motivo do seu contato. Assim que eu estiver disponível, responderei você com toda atenção.`;
+
+const TALK_TO_LUANA_ACK_TEXT = `Recebido! A Luana já foi avisada e vai te responder por aqui assim que possível. 🤎`;
 
 const METHOD_TEXT = `Fico muito feliz pelo seu interesse no Método Look Pronto!
 
@@ -50,6 +65,11 @@ Antes de te explicar como funciona, quero entender um pouquinho sobre você. Me 
 
 * Qual é a sua maior dificuldade hoje em relação à sua imagem?
 * Qual a sua profissão?`;
+
+const METHOD_FOLLOWUP_TEXT = `Perfeito, obrigada por compartilhar! 🤎
+O Método Look Pronto foi criado exatamente pra ajudar mulheres como você a construir um estilo prático, autêntico e alinhado com quem você é — sem complicação no dia a dia.
+
+A Luana vai entrar em contato em breve pra te contar todos os detalhes e ver o melhor caminho pra você.`;
 
 const COMMUNITY_TEXT = `*Conhecer a Comunidade Look Pronto*
 Veja como funciona e faça parte dela gratuitamente.
@@ -61,6 +81,12 @@ Entre agora pelo link: https://chat.whatsapp.com/GnQ20LTjh1iC6yF0z9HCZO?mode=gi_
 Seja muito bem-vinda, espero você por lá.`;
 
 const OTHER_SUBJECT_TEXT = `Perfeito! Escreva sua mensagem e, assim que possível, retornaremos para ajudar você da melhor forma.`;
+
+const OTHER_SUBJECT_ACK_TEXT = `Recebido! Nossa equipe já foi avisada e vai te responder por aqui assim que possível. 🤎`;
+
+// Resposta breve enquanto a conversa está aguardando atendimento humano —
+// nunca reabre o menu nem improvisa, só confirma o recebimento (regra 4).
+const HUMAN_HANDOFF_ACK_TEXT = `Recebido! Já estamos com sua mensagem, aguarde só um instante 🤎`;
 
 @Injectable()
 export class ConversationEngineService {
@@ -116,10 +142,18 @@ export class ConversationEngineService {
     }
 
     const text = (msg.text ?? '').trim();
-    let state = this.parseState(conversation.state as any);
+    const { state: parsedState, isNew } = this.parseState(conversation.state as any);
+    let state = parsedState;
 
-    if (state.step === ConversationStep.MENU || this.isStale(state)) {
-      state = await this.stepMenu(client.id, text);
+    // "Saudar" (WELCOME_MENU_TEXT completo) só no primeiro contato ou quando
+    // a conversa esfriou (isStale) e a pessoa volta a escrever — regra 1.
+    // Se já está no menu por ter concluído um fluxo (ex: Comunidade), uma
+    // escolha não reconhecida recebe só um pedido de esclarecimento, nunca
+    // a saudação de novo.
+    if (isNew || this.isStale(state)) {
+      state = await this.stepMenu(client.id, text, conversation.id, true);
+    } else if (state.step === ConversationStep.MENU) {
+      state = await this.stepMenu(client.id, text, conversation.id, false);
     } else {
       state = await this.routeStep(client.id, state, text);
     }
@@ -143,20 +177,30 @@ export class ConversationEngineService {
     return lastDay !== today;
   }
 
-  private parseState(raw: any): ConversationState {
-    if (!raw || !raw.step) return freshState(ConversationStep.MENU);
-    return raw as ConversationState;
+  private parseState(raw: any): { state: ConversationState; isNew: boolean } {
+    if (!raw || !raw.step) return { state: freshState(ConversationStep.MENU), isNew: true };
+    return { state: raw as ConversationState, isNew: false };
   }
 
   private async reply(conversationId: string, text: string) {
     await this.outbound.sendToConversation(conversationId, text);
   }
 
+  /** "menu", "voltar", "início" — pedido explícito pra sair do fluxo atual e voltar ao menu (regra 2b). */
+  private isBackToMenuCommand(text: string): boolean {
+    return /^(menu|voltar|in[ií]cio)$/i.test(text.trim());
+  }
+
   // ---------------------------------------------------------------------
   // Menu principal — canal oficial (ver docs/03-fluxos-whatsapp.md)
   // ---------------------------------------------------------------------
 
-  private async stepMenu(clientId: string, text: string, conversationIdParam?: string): Promise<ConversationState> {
+  private async stepMenu(
+    clientId: string,
+    text: string,
+    conversationIdParam?: string,
+    greet = false,
+  ): Promise<ConversationState> {
     const conversation =
       conversationIdParam ?? (await this.prisma.conversation.findFirst({ where: { clientId } }))?.id;
     if (!conversation) return freshState(ConversationStep.MENU);
@@ -180,12 +224,24 @@ export class ConversationEngineService {
       return freshState(ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE);
     }
 
-    await this.reply(conversation, WELCOME_MENU_TEXT);
+    // Nenhuma opção reconhecida. Só manda a saudação completa em primeiro
+    // contato / retorno após inatividade (greet=true) — regra 1. Se a
+    // pessoa já está no menu e pediu explicitamente pra voltar, confirma
+    // sem soar como se não tivesse entendido; caso contrário, pede
+    // esclarecimento gentil (regra 3), nunca repete a saudação.
+    if (greet) {
+      await this.reply(conversation, WELCOME_MENU_TEXT);
+    } else if (this.isBackToMenuCommand(choice)) {
+      await this.reply(conversation, BACK_TO_MENU_TEXT);
+    } else {
+      await this.reply(conversation, MENU_CLARIFICATION_TEXT);
+    }
     return freshState(ConversationStep.MENU);
   }
 
-  /** Marca a conversa como aguardando resposta humana — usado pelas opções do menu que terminam em "retornaremos". */
-  private async handoffToHuman(conversationId: string): Promise<ConversationState> {
+  /** Marca a conversa como aguardando resposta humana e confirma o recebimento antes de silenciar (regra 4/5/7). */
+  private async handoffToHuman(conversationId: string, ackText: string): Promise<ConversationState> {
+    await this.reply(conversationId, ackText);
     await this.prisma.conversation.update({ where: { id: conversationId }, data: { needsHuman: true } });
     return freshState(ConversationStep.HUMAN_HANDOFF);
   }
@@ -194,14 +250,29 @@ export class ConversationEngineService {
     const conversation = await this.prisma.conversation.findFirst({ where: { clientId } });
     if (!conversation) return state;
 
+    // Pedido explícito de voltar ao menu vale em qualquer etapa do fluxo,
+    // inclusive durante atendimento humano — regra 2b/4/7.
+    if (this.isBackToMenuCommand(text)) {
+      await this.reply(conversation.id, BACK_TO_MENU_TEXT);
+      return freshState(ConversationStep.MENU);
+    }
+
     switch (state.step) {
       case ConversationStep.TALK_TO_LUANA_AWAIT_MESSAGE:
+        // A mensagem (motivo do contato) já foi salva pelo handleIncoming —
+        // confirma o recebimento e passa pra atendimento humano (regra 4).
+        return this.handoffToHuman(conversation.id, TALK_TO_LUANA_ACK_TEXT);
       case ConversationStep.METHOD_AWAIT_ANSWERS:
+        // Reforça o valor do método e dá um próximo passo concreto antes de
+        // encaminhar pra Luana — nunca termina em silêncio (regra 5).
+        return this.handoffToHuman(conversation.id, METHOD_FOLLOWUP_TEXT);
       case ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE:
-        // A mensagem já foi salva pelo handleIncoming — só falta marcar que
-        // precisa de atenção humana. O texto de cada opção já avisou que a
-        // resposta vem "assim que possível", então o bot não replica nada aqui.
-        return this.handoffToHuman(conversation.id);
+        return this.handoffToHuman(conversation.id, OTHER_SUBJECT_ACK_TEXT);
+      case ConversationStep.HUMAN_HANDOFF:
+        // Enquanto aguarda atendimento humano, só reconhece a mensagem —
+        // nunca reabre o menu nem improvisa uma resposta (regra 4).
+        await this.reply(conversation.id, HUMAN_HANDOFF_ACK_TEXT);
+        return freshState(ConversationStep.HUMAN_HANDOFF);
       case ConversationStep.SCHEDULE_CHOOSE_SERVICE:
         return this.scheduleChooseService(conversation.id, state, text);
       case ConversationStep.SCHEDULE_CHOOSE_LOCATION:

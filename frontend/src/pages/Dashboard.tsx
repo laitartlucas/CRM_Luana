@@ -100,7 +100,6 @@ export default function Dashboard() {
       { label: 'Faturamento projetado', value: kpis ? money(kpis.revenueProjection) : '—' },
       { label: 'Faturamento realizado', value: kpis ? money(kpis.revenueRealized) : '—' },
       { label: 'Ticket médio (fechados)', value: metrics ? money(metrics.averageTicket) : '—' },
-      { label: 'Forma de pagamento mais usada', value: metrics?.mostUsedPaymentMethod ?? '—' },
       { label: 'Taxa de renovação/indicação', value: pct(renewalRate) },
     ],
     [kpis, metrics, renewalRate],
@@ -151,7 +150,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="two-col" style={{ marginTop: '1.25rem' }}>
+      <div className="card-grid-2" style={{ marginTop: '1.25rem' }}>
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Funil do Pipeline Comercial</h3>
           <ResponsiveContainer width="100%" height={240}>

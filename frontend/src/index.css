@@ -210,7 +210,8 @@ input:focus, select:focus, textarea:focus {
   flex: 1;
   padding: 2.25rem 2.5rem;
   width: 100%;
-  max-width: 1320px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 /* Login */
@@ -344,8 +345,17 @@ tr:hover td { background: #fbf8f2; }
   gap: 1.5rem;
   align-items: start;
 }
+
+/* Pares de cards de mesmo peso (ex: dois gráficos) — colunas iguais que se
+   redistribuem conforme o espaço disponível, sem sobrar coluna vazia. */
+.card-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
 @media (max-width: 800px) {
-  .two-col { grid-template-columns: 1fr; }
+  .two-col, .card-grid-2 { grid-template-columns: 1fr; }
   .app-content { padding: 1.5rem; }
   .app-shell { flex-direction: column; }
   .sidebar { width: 100%; min-width: 0; height: auto; position: static; flex-direction: row; align-items: center; padding: 0.75rem 1rem; gap: 1rem; }
