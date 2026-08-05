@@ -22,7 +22,7 @@ export const MESSAGE_TEMPLATE_META: Record<MessageTemplateKey, MessageTemplateMe
     description: 'Primeira mensagem para abordar uma lead/cliente nova, use ao enviar manualmente pela ficha dela.',
     variables: ['cliente'],
     default:
-      'Oi {{cliente}}! Aqui é a Luana, consultora de imagem 💛 Vi seu interesse e fiquei muito feliz! Quero te conhecer melhor e entender como posso te ajudar a montar looks com mais confiança. Topa bater um papo rapidinho?',
+      'Oi {{cliente}}! Aqui é a Luana, consultora de imagem. Vi seu interesse e fiquei muito feliz! Quero te conhecer melhor e entender como posso te ajudar a montar looks com mais confiança. Topa bater um papo rapidinho?',
   },
   reminder24h: {
     label: 'Lembrete — 24h antes',
@@ -46,7 +46,7 @@ export const MESSAGE_TEMPLATE_META: Record<MessageTemplateKey, MessageTemplateMe
     label: 'Pós-atendimento',
     description: 'Enviado depois que a consultoria é marcada como concluída.',
     variables: ['cliente', 'servico'],
-    default: 'Oi {{cliente}}! Como foi sua experiência com os looks de "{{servico}}"? Conta pra gente 💛',
+    default: 'Oi {{cliente}}! Como foi sua experiência com os looks de "{{servico}}"? Conta pra gente.',
   },
   noShowReengagement: {
     label: 'Reengajamento — falta (no-show)',
@@ -59,7 +59,7 @@ export const MESSAGE_TEMPLATE_META: Record<MessageTemplateKey, MessageTemplateMe
     description: 'Enviado quando uma cliente fica um tempo sem contato após o encerramento.',
     variables: ['cliente'],
     default:
-      'Oi {{cliente}}! Faz um tempinho desde nossa última consultoria — como estão os looks? Topa revisar seu guarda-roupa ou já pensou em indicar alguém pra gente? 💛',
+      'Oi {{cliente}}! Faz um tempinho desde nossa última consultoria — como estão os looks? Topa revisar seu guarda-roupa ou já pensou em indicar alguém pra gente?',
   },
 };
 

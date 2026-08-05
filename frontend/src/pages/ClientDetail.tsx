@@ -106,11 +106,13 @@ export default function ClientDetail() {
         ← Voltar
       </button>
       <div className="toolbar" style={{ marginBottom: '-0.5rem' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{client.name || '(sem nome)'}</h1>
-          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>{client.phoneE164}</p>
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0, overflowWrap: 'break-word' }}>{client.name || '(sem nome)'}</h1>
+          <p style={{ color: 'var(--color-text-muted)', margin: 0, overflowWrap: 'break-word' }}>
+            {client.phoneE164}
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', flexShrink: 0 }}>
           <button className="btn secondary" onClick={() => setMessaging(true)}>
             Enviar mensagem
           </button>

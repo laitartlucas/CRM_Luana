@@ -11,6 +11,7 @@ import { UpdateLeadDto } from './dto/update-lead.dto';
 // algo mais sofisticado — mesma ressalva que Client.noShowScore.
 const SOURCE_WEIGHT: Record<LeadSource, number> = {
   REFERRAL: 25,
+  EVENT: 20,
   CHALLENGE: 15,
   REEL: 15,
   COMMENT: 12,

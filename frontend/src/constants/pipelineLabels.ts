@@ -61,6 +61,7 @@ export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
   REFERRAL: 'Indicação',
   CHALLENGE: 'Desafio',
   WHATSAPP_GROUP: 'Grupo de WhatsApp',
+  EVENT: 'Evento',
   OTHER: 'Outro',
 };
 
@@ -73,6 +74,7 @@ export const LEAD_SOURCE_ORDER: LeadSource[] = [
   'REFERRAL',
   'CHALLENGE',
   'WHATSAPP_GROUP',
+  'EVENT',
   'OTHER',
 ];
 

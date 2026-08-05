@@ -93,14 +93,14 @@ export default function LeadDetail() {
         ← Voltar
       </button>
       <div className="toolbar" style={{ marginBottom: '-0.5rem' }}>
-        <div>
-          <h1 style={{ margin: 0 }}>{lead.name || '(sem nome)'}</h1>
-          <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
+        <div style={{ minWidth: 0 }}>
+          <h1 style={{ margin: 0, overflowWrap: 'break-word' }}>{lead.name || '(sem nome)'}</h1>
+          <p style={{ color: 'var(--color-text-muted)', margin: 0, overflowWrap: 'break-word' }}>
             {lead.phoneE164} {lead.leadSource ? `· ${LEAD_SOURCE_LABELS[lead.leadSource]}` : ''}
             {lead.leadSourceContentRef ? ` (${lead.leadSourceContentRef})` : ''}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', flexShrink: 0 }}>
           <button className="btn secondary" onClick={() => setMessaging(true)}>
             Enviar mensagem
           </button>

@@ -115,6 +115,7 @@ enum LeadSource {
   REFERRAL
   CHALLENGE
   WHATSAPP_GROUP
+  EVENT
   OTHER
 }
 

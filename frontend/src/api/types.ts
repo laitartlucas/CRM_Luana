@@ -52,6 +52,7 @@ export type LeadSource =
   | 'REFERRAL'
   | 'CHALLENGE'
   | 'WHATSAPP_GROUP'
+  | 'EVENT'
   | 'OTHER';
 
 // Módulo 2 — Pipeline Comercial

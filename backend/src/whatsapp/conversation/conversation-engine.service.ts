@@ -25,43 +25,50 @@ interface IncomingMessage {
 // Texto do menu principal do canal oficial — mostrado sempre que a
 // conversa entra/reentra em ConversationStep.MENU (primeiro contato,
 // timeout de inatividade, ou escolha não reconhecida).
-const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo. 🤎
+const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo.
+
 Para direcionar você da melhor forma, responda com o número da opção desejada:
-1️⃣ Falar com a Luana
+
+1) Falar com a Luana
 Atendimento, dúvidas ou orientações.
-2️⃣ Conhecer o Método Look Pronto
+
+2) Conhecer o Método Look Pronto
 Descubra como a mentoria pode transformar a forma como você se veste e se posiciona.
-3️⃣ Conhecer a Comunidade Look Pronto
-Veja como funciona a comunidade e tudo o que ela oferece.
-4️⃣ Já sou cliente
+
+3) Conhecer a Comunidade Look Pronto
+Veja como funciona e faça parte dela gratuitamente.
+
+4) Já sou cliente
 Suporte, acompanhamento e dúvidas sobre sua mentoria.
-5️⃣ Outro assunto
+
+5) Outro assunto
 Escreva sua mensagem e retornaremos o mais breve possível.`;
 
 const TALK_TO_LUANA_TEXT = `Que bom ter você por aqui!
-Para que eu possa entender melhor como te ajudar, me conte brevemente qual é o motivo do seu contato.
-Assim que eu estiver disponível, responderei você com toda atenção.`;
 
-const METHOD_TEXT = `Fico muito feliz pelo seu interesse no Método Look Pronto! 🤎
-Antes de te explicar como funciona, quero entender um pouquinho sobre você.
-Me responda:
+Para que eu possa entender melhor como te ajudar, me conte brevemente qual é o motivo do seu contato. Assim que eu estiver disponível, responderei você com toda atenção.`;
+
+const METHOD_TEXT = `Fico muito feliz pelo seu interesse no Método Look Pronto!
+
+Antes de te explicar como funciona, quero entender um pouquinho sobre você. Me responda:
 
 * Qual é a sua maior dificuldade hoje em relação à sua imagem?
 * Qual a sua profissão?`;
 
-const COMMUNITY_TEXT = `Que bom que você quer fazer parte da Comunidade Look Pronto!
-A comunidade é totalmente gratuita e foi criada para mulheres que desejam aprender a se vestir com mais estratégia, praticidade e confiança.
-Lá você recebe conteúdos exclusivos, dicas, desafios, materiais e fica por dentro de todas as novidades.
+const COMMUNITY_TEXT = `*Conhecer a Comunidade Look Pronto*
+Veja como funciona e faça parte dela gratuitamente.
+
+A comunidade é totalmente gratuita e foi criada para mulheres que desejam aprender a se vestir com mais estratégia, praticidade e confiança. Lá você recebe conteúdos exclusivos, dicas, desafios, materiais e fica por dentro de todas as novidades.
+
 Entre agora pelo link: https://chat.whatsapp.com/GnQ20LTjh1iC6yF0z9HCZO?mode=gi_t
 
-Seja muito bem-vinda! Espero você por lá. ✨`;
+Seja muito bem-vinda, espero você por lá.`;
 
-const EXISTING_CLIENT_TEXT = `Que bom ter você por aqui novamente! 🤎
-Como posso ajudar você hoje?
-Descreva sua dúvida ou necessidade e retornaremos o mais breve possível.`;
+const EXISTING_CLIENT_TEXT = `Que bom ter você por aqui novamente!
 
-const OTHER_SUBJECT_TEXT = `Perfeito! 🤎
-Escreva sua mensagem e, assim que possível, retornaremos para ajudar você da melhor forma.`;
+Como posso ajudar você hoje? Descreva sua dúvida ou necessidade e retornaremos o mais breve possível.`;
+
+const OTHER_SUBJECT_TEXT = `Perfeito! Escreva sua mensagem e, assim que possível, retornaremos para ajudar você da melhor forma.`;
 
 @Injectable()
 export class ConversationEngineService {
@@ -112,7 +119,7 @@ export class ConversationEngineService {
         storageUrl: msg.mediaSavedUrl,
         caption: msg.text,
       });
-      await this.reply(conversation.id, 'Recebi sua imagem, já salvei na sua ficha. 📸');
+      await this.reply(conversation.id, 'Recebi sua imagem e já salvei na sua ficha.');
       if (!msg.text) return; // só a foto, sem instrução de texto — não avança o fluxo
     }
 
@@ -235,7 +242,7 @@ export class ConversationEngineService {
     const list = services
       .map((s, i) => `${i + 1}) ${s.name} — ${s.durationMinutes}min — R$ ${s.price}`)
       .join('\n');
-    await this.reply(conversationId, `Ótimo! Qual serviço você quer agendar?\n${list}`);
+    await this.reply(conversationId, `*Qual serviço você quer agendar?*\n\n${list}`);
     return freshState(ConversationStep.SCHEDULE_CHOOSE_SERVICE, {
       candidateSlots: services.map((s) => s.id), // reaproveita o campo pra guardar os ids na ordem exibida
     });
@@ -249,7 +256,7 @@ export class ConversationEngineService {
       await this.reply(conversationId, 'Escolha um número válido da lista de serviços.');
       return state;
     }
-    await this.reply(conversationId, 'É presencial ou online?\n1) Presencial\n2) Online');
+    await this.reply(conversationId, '*É presencial ou online?*\n\n1) Presencial\n2) Online');
     return freshState(ConversationStep.SCHEDULE_CHOOSE_LOCATION, { serviceId });
   }
 
@@ -274,7 +281,7 @@ export class ConversationEngineService {
     });
 
     if (slots.length === 0) {
-      await this.reply(conversationId, 'Não encontrei horários livres nos próximos dias. Vou avisar a consultora para te ajudar. 🙏');
+      await this.reply(conversationId, 'Não encontrei horários livres nos próximos dias. Vou avisar a consultora para te ajudar.');
       await this.prisma.conversation.update({ where: { id: conversationId }, data: { needsHuman: true } });
       return freshState(ConversationStep.MENU);
     }
@@ -287,7 +294,7 @@ export class ConversationEngineService {
 
     await this.reply(
       conversationId,
-      `Encontrei esses horários:\n${list}\nDigite o número da opção, ou "outro dia" para ver mais datas.`,
+      `*Horários disponíveis:*\n\n${list}\n\nDigite o número da opção, ou "outro dia" para ver mais datas.`,
     );
     return freshState(ConversationStep.SCHEDULE_CHOOSE_SLOT, {
       ...state.data,
@@ -312,7 +319,7 @@ export class ConversationEngineService {
     const tz = professional?.timezone ?? 'America/Sao_Paulo';
     await this.reply(
       conversationId,
-      `Confirma o agendamento de "${service.name}" em ${formatInTimeZone(new Date(iso), tz, "dd/MM 'às' HH:mm")}?\n1) Sim\n2) Não`,
+      `*Confirma o agendamento?*\n\n${service.name} — ${formatInTimeZone(new Date(iso), tz, "dd/MM 'às' HH:mm")}\n\n1) Sim\n2) Não`,
     );
     return freshState(ConversationStep.SCHEDULE_CONFIRM, { ...state.data, selectedSlotIso: iso });
   }
@@ -332,7 +339,7 @@ export class ConversationEngineService {
       });
       await this.reply(
         conversationId,
-        `Agendado! ✅ Te espero. Você vai receber um lembrete antes do horário.`,
+        'Agendado! Te espero. Você vai receber um lembrete antes do horário.',
       );
       this.logger.log(`Agendamento ${appointment.id} criado via WhatsApp para cliente ${clientId}`);
     } catch (err) {
@@ -367,7 +374,7 @@ export class ConversationEngineService {
           `${i + 1}) ${a.service.name} — ${formatInTimeZone(a.startAt, a.professional.timezone, "dd/MM 'às' HH:mm")}`,
       )
       .join('\n');
-    await this.reply(conversationId, `Qual agendamento você quer remarcar?\n${list}`);
+    await this.reply(conversationId, `*Qual agendamento você quer remarcar?*\n\n${list}`);
     return freshState(ConversationStep.RESCHEDULE_CHOOSE_APPOINTMENT, {
       candidateAppointmentIds: appointments.map((a) => a.id),
     });
@@ -406,7 +413,7 @@ export class ConversationEngineService {
     const professional = await this.prisma.user.findUnique({ where: { id: state.data.professionalId! } });
     const tz = professional?.timezone ?? 'America/Sao_Paulo';
     const list = slots.map((s, i) => `${i + 1}) ${formatInTimeZone(s, tz, "dd/MM 'às' HH:mm")}`).join('\n');
-    await this.reply(conversationId, `Novos horários disponíveis:\n${list}`);
+    await this.reply(conversationId, `*Novos horários disponíveis:*\n\n${list}`);
     return freshState(ConversationStep.RESCHEDULE_CHOOSE_SLOT, {
       ...state.data,
       candidateSlots: slots.map((s) => s.toISOString()),
@@ -424,7 +431,7 @@ export class ConversationEngineService {
     const tz = professional?.timezone ?? 'America/Sao_Paulo';
     await this.reply(
       conversationId,
-      `Remarcar para ${formatInTimeZone(new Date(iso), tz, "dd/MM 'às' HH:mm")}? \n1) Sim\n2) Não`,
+      `*Remarcar para ${formatInTimeZone(new Date(iso), tz, "dd/MM 'às' HH:mm")}?*\n\n1) Sim\n2) Não`,
     );
     return freshState(ConversationStep.RESCHEDULE_CONFIRM, { ...state.data, selectedSlotIso: iso });
   }
@@ -435,7 +442,7 @@ export class ConversationEngineService {
     }
     try {
       await this.appointmentsService.reschedule(state.data.targetAppointmentId!, new Date(state.data.selectedSlotIso!));
-      await this.reply(conversationId, 'Prontinho, remarcado! ✅');
+      await this.reply(conversationId, 'Prontinho, remarcado!');
     } catch {
       await this.reply(conversationId, 'Esse horário acabou de ser ocupado. Vamos ver outras opções.');
       return this.offerRescheduleSlots(conversationId, state);
@@ -459,7 +466,7 @@ export class ConversationEngineService {
           `${i + 1}) ${a.service.name} — ${formatInTimeZone(a.startAt, a.professional.timezone, "dd/MM 'às' HH:mm")}`,
       )
       .join('\n');
-    await this.reply(conversationId, `Qual agendamento você quer cancelar?\n${list}`);
+    await this.reply(conversationId, `*Qual agendamento você quer cancelar?*\n\n${list}`);
     return freshState(ConversationStep.CANCEL_CHOOSE_APPOINTMENT, {
       candidateAppointmentIds: appointments.map((a) => a.id),
     });
@@ -481,7 +488,7 @@ export class ConversationEngineService {
     await this.appointmentsService.cancel(state.data.targetAppointmentId!, reason);
     await this.reply(
       conversationId,
-      'Cancelado. Quer já deixar outro horário marcado?\n1) Sim, agendar agora\n2) Não, por enquanto não',
+      'Cancelado.\n\n*Quer já deixar outro horário marcado?*\n\n1) Sim, agendar agora\n2) Não, por enquanto não',
     );
     return freshState(ConversationStep.MENU);
   }
