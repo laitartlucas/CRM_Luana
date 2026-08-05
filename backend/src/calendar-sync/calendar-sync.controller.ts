@@ -67,6 +67,18 @@ export class CalendarSyncController {
     res.redirect(`${this.config.get<string>('WEB_APP_URL')}/configuracoes?googleCalendar=connected`);
   }
 
+  /** Traz pro CRM os eventos do Google Agenda cujo título/descrição bata com um cliente cadastrado. */
+  @Post('import')
+  importFromGoogle(@CurrentUser() user: AuthenticatedUser) {
+    return this.calendarSyncService.importFromGoogle(user.id);
+  }
+
+  /** Envia pro Google Calendar os agendamentos do CRM que ainda não têm espelho lá. */
+  @Post('export')
+  exportToGoogle(@CurrentUser() user: AuthenticatedUser) {
+    return this.calendarSyncService.exportToGoogle(user.id);
+  }
+
   /**
    * Webhook de push notification do Google (ver
    * https://developers.google.com/calendar/api/guides/push). Responde

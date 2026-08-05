@@ -163,6 +163,9 @@ export const CalendarSyncApi = {
     api.get<{ connected: boolean; lastSyncAt?: string; lastSyncError?: string | null }>(
       `/calendar-sync/health/${professionalId}`,
     ),
+  importFromGoogle: () =>
+    api.post<{ imported: number; skippedNoClient: number; skippedExisting: number }>('/calendar-sync/import'),
+  exportToGoogle: () => api.post<{ exported: number; failed: number; total: number }>('/calendar-sync/export'),
 };
 
 export const WhatsappApi = {

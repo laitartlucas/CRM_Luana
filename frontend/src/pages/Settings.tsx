@@ -28,6 +28,17 @@ export default function Settings() {
   const [health, setHealth] = useState<{ connected: boolean; lastSyncAt?: string; lastSyncError?: string | null } | null>(
     null,
   );
+  const [gcalImporting, setGcalImporting] = useState(false);
+  const [gcalExporting, setGcalExporting] = useState(false);
+  const [gcalActionError, setGcalActionError] = useState<string | null>(null);
+  const [gcalImportResult, setGcalImportResult] = useState<{
+    imported: number;
+    skippedNoClient: number;
+    skippedExisting: number;
+  } | null>(null);
+  const [gcalExportResult, setGcalExportResult] = useState<{ exported: number; failed: number; total: number } | null>(
+    null,
+  );
 
   const [simPhone, setSimPhone] = useState('+5511999990000');
   const [simText, setSimText] = useState('1');
@@ -148,6 +159,36 @@ export default function Settings() {
     CalendarSyncApi.health(professional.id).then((res) => setHealth(res.data));
   }
 
+  async function handleGcalImport() {
+    setGcalImporting(true);
+    setGcalActionError(null);
+    setGcalImportResult(null);
+    try {
+      const res = await CalendarSyncApi.importFromGoogle();
+      setGcalImportResult(res.data);
+      loadHealth();
+    } catch (err: any) {
+      setGcalActionError(err?.response?.data?.message ?? 'Não foi possível importar os eventos do Google Agenda.');
+    } finally {
+      setGcalImporting(false);
+    }
+  }
+
+  async function handleGcalExport() {
+    setGcalExporting(true);
+    setGcalActionError(null);
+    setGcalExportResult(null);
+    try {
+      const res = await CalendarSyncApi.exportToGoogle();
+      setGcalExportResult(res.data);
+      loadHealth();
+    } catch (err: any) {
+      setGcalActionError(err?.response?.data?.message ?? 'Não foi possível exportar os agendamentos pro Google Agenda.');
+    } finally {
+      setGcalExporting(false);
+    }
+  }
+
   useEffect(loadHealth, [professional]);
 
   function loadEvoStatus() {
@@ -236,6 +277,53 @@ export default function Settings() {
         <a className="btn" href={CalendarSyncApi.connectUrl()}>
           {health?.connected ? 'Reconectar' : 'Conectar Google Calendar'}
         </a>
+
+        {health?.connected && (
+          <>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+              <button className="btn" onClick={handleGcalImport} disabled={gcalImporting}>
+                {gcalImporting ? 'Importando...' : 'Importar do Google Agenda'}
+              </button>
+              <button className="btn" onClick={handleGcalExport} disabled={gcalExporting}>
+                {gcalExporting ? 'Exportando...' : 'Exportar pro Google Agenda'}
+              </button>
+            </div>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginBottom: 0 }}>
+              Importar traz eventos dos últimos 3 meses + futuros cujo título ou descrição contenha o nome de um
+              cliente já cadastrado (viram agendamentos com o serviço "Importado do Google", editável depois).
+              Exportar envia pro Google os agendamentos do CRM que ainda não têm espelho lá.
+            </p>
+
+            {gcalActionError && <p className="error-text">{gcalActionError}</p>}
+
+            {gcalImportResult && (
+              <div
+                className="card"
+                style={{ marginTop: '0.5rem', borderColor: 'var(--color-success)', fontSize: '0.85rem' }}
+              >
+                <strong>Importação concluída</strong>
+                <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
+                  <li>{gcalImportResult.imported} agendamento(s) importado(s)</li>
+                  <li>{gcalImportResult.skippedNoClient} evento(s) ignorado(s) — sem cliente identificado no título/descrição</li>
+                  <li>{gcalImportResult.skippedExisting} evento(s) já haviam sido importados antes</li>
+                </ul>
+              </div>
+            )}
+
+            {gcalExportResult && (
+              <div
+                className="card"
+                style={{ marginTop: '0.5rem', borderColor: 'var(--color-success)', fontSize: '0.85rem' }}
+              >
+                <strong>Exportação concluída</strong>
+                <ul style={{ margin: '0.35rem 0 0', paddingLeft: '1.2rem' }}>
+                  <li>{gcalExportResult.exported} de {gcalExportResult.total} agendamento(s) enviado(s) ao Google</li>
+                  {gcalExportResult.failed > 0 && <li>{gcalExportResult.failed} falharam — veja o último erro acima em "Status"</li>}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: '1.25rem' }}>

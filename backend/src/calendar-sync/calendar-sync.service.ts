@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { calendar_v3, google } from 'googleapis';
 import { randomUUID } from 'crypto';
+import { fromZonedTime } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { CryptoService } from '../common/crypto/crypto.service';
 import { CircuitBreaker } from '../common/utils/circuit-breaker';
@@ -358,5 +359,151 @@ export class CalendarSyncService {
       lastSyncError: connection.lastSyncError,
       channelActive: Boolean(connection.channelId),
     };
+  }
+
+  private normalizeText(s: string): string {
+    return s
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  /** Busca simples por substring do nome (normalizado) do cliente no texto do evento. */
+  private findMatchingClient<T extends { id: string; name: string }>(eventText: string, clients: T[]): T | null {
+    const normalizedEvent = this.normalizeText(eventText);
+    for (const client of clients) {
+      const normalizedName = this.normalizeText(client.name);
+      if (normalizedName.length >= 4 && normalizedEvent.includes(normalizedName)) {
+        return client;
+      }
+    }
+    return null;
+  }
+
+  /** Serviço placeholder usado em agendamentos importados do Google (sem serviço real definido lá). */
+  private async getOrCreateImportedService() {
+    const existing = await this.prisma.service.findFirst({ where: { name: 'Importado do Google' } });
+    if (existing) return existing;
+    return this.prisma.service.create({
+      data: {
+        name: 'Importado do Google',
+        description: 'Placeholder para agendamentos trazidos do Google Agenda — edite para ajustar o serviço real.',
+        durationMinutes: 60,
+        price: 0,
+        active: false,
+      },
+    });
+  }
+
+  /**
+   * Traz pro CRM os eventos do Google Agenda (últimos 3 meses + futuros) cujo
+   * título/descrição contenha o nome de um cliente já cadastrado. Eventos sem
+   * cliente identificável são ignorados — não vira bloqueio genérico aqui
+   * (isso já é coberto pelo sync incremental via webhook).
+   */
+  async importFromGoogle(professionalId: string) {
+    const { client, connection } = await this.getAuthorizedClient(professionalId);
+    const calendar = google.calendar({ version: 'v3', auth: client });
+
+    const professional = await this.prisma.user.findUnique({ where: { id: professionalId } });
+    const tz = professional?.timezone ?? 'America/Sao_Paulo';
+
+    const clients = await this.prisma.client.findMany({ select: { id: true, name: true } });
+    const genericService = await this.getOrCreateImportedService();
+
+    const timeMin = new Date();
+    timeMin.setMonth(timeMin.getMonth() - 3);
+
+    let pageToken: string | undefined;
+    let imported = 0;
+    let skippedNoClient = 0;
+    let skippedExisting = 0;
+
+    do {
+      const { data } = await calendar.events.list({
+        calendarId: connection.googleCalendarId,
+        timeMin: timeMin.toISOString(),
+        singleEvents: true,
+        orderBy: 'startTime',
+        maxResults: 250,
+        pageToken,
+      });
+
+      for (const event of data.items ?? []) {
+        if (event.status === 'cancelled' || !event.id) continue;
+        if (event.extendedProperties?.private?.crmAppointmentId) continue; // já é um evento nosso
+
+        const existing = await this.prisma.appointment.findUnique({ where: { googleEventId: event.id } });
+        if (existing) {
+          skippedExisting++;
+          continue;
+        }
+
+        let startAt: Date;
+        let endAt: Date;
+        if (event.start?.dateTime && event.end?.dateTime) {
+          startAt = new Date(event.start.dateTime);
+          endAt = new Date(event.end.dateTime);
+        } else if (event.start?.date && event.end?.date) {
+          startAt = fromZonedTime(`${event.start.date}T00:00:00`, tz);
+          endAt = fromZonedTime(`${event.end.date}T00:00:00`, tz);
+        } else {
+          continue;
+        }
+
+        const eventText = [event.summary, event.description].filter(Boolean).join(' — ');
+        const matchedClient = this.findMatchingClient(eventText, clients);
+        if (!matchedClient) {
+          skippedNoClient++;
+          continue;
+        }
+
+        await this.prisma.appointment.create({
+          data: {
+            professionalId,
+            clientId: matchedClient.id,
+            serviceId: genericService.id,
+            startAt,
+            endAt,
+            status: endAt < new Date() ? 'COMPLETED' : 'SCHEDULED',
+            source: 'GOOGLE',
+            notes: `Importado do Google Agenda: "${event.summary ?? '(sem título)'}"${event.description ? `\n${event.description}` : ''}`,
+            googleEventId: event.id,
+          },
+        });
+        imported++;
+      }
+
+      pageToken = data.nextPageToken ?? undefined;
+    } while (pageToken);
+
+    await this.prisma.googleCalendarConnection.update({
+      where: { userId: professionalId },
+      data: { lastSyncAt: new Date(), lastSyncError: null },
+    });
+
+    return { imported, skippedNoClient, skippedExisting };
+  }
+
+  /** Envia pro Google Calendar todos os agendamentos do profissional que ainda não têm espelho lá. */
+  async exportToGoogle(professionalId: string) {
+    const appointments = await this.prisma.appointment.findMany({
+      where: { professionalId, googleEventId: null, status: { not: 'CANCELLED' } },
+      select: { id: true },
+    });
+
+    let exported = 0;
+    let failed = 0;
+    for (const { id } of appointments) {
+      try {
+        await this.upsertEventForAppointment(id);
+        exported++;
+      } catch {
+        failed++;
+      }
+    }
+
+    return { exported, failed, total: appointments.length };
   }
 }
