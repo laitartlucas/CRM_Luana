@@ -92,7 +92,7 @@ export default function LeadDetail() {
       <button className="btn-link" onClick={() => navigate('/leads')}>
         ← Voltar
       </button>
-      <div className="toolbar" style={{ marginBottom: '-0.5rem' }}>
+      <div className="toolbar">
         <div style={{ minWidth: 0 }}>
           <h1 style={{ margin: 0, overflowWrap: 'break-word' }}>{lead.name || '(sem nome)'}</h1>
           <p style={{ color: 'var(--color-text-muted)', margin: 0, overflowWrap: 'break-word' }}>
