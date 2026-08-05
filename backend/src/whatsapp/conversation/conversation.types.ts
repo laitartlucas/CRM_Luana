@@ -2,7 +2,6 @@ export enum ConversationStep {
   MENU = 'MENU',
   TALK_TO_LUANA_AWAIT_MESSAGE = 'TALK_TO_LUANA_AWAIT_MESSAGE',
   METHOD_AWAIT_ANSWERS = 'METHOD_AWAIT_ANSWERS',
-  EXISTING_CLIENT_AWAIT_MESSAGE = 'EXISTING_CLIENT_AWAIT_MESSAGE',
   OTHER_SUBJECT_AWAIT_MESSAGE = 'OTHER_SUBJECT_AWAIT_MESSAGE',
   SCHEDULE_CHOOSE_SERVICE = 'SCHEDULE_CHOOSE_SERVICE',
   SCHEDULE_CHOOSE_LOCATION = 'SCHEDULE_CHOOSE_LOCATION',
@@ -31,8 +30,6 @@ export interface ConversationState {
   data: ConversationStateData;
   updatedAt: string;
 }
-
-export const CONTEXT_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function freshState(step: ConversationStep, data: ConversationStateData = {}): ConversationState {
   return { step, data, updatedAt: new Date().toISOString() };

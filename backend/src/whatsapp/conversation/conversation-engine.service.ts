@@ -8,7 +8,6 @@ import { AppointmentsService } from '../../appointments/appointments.service';
 import { UsersService } from '../../users/users.service';
 import { WhatsappOutboundService } from '../whatsapp-outbound.service';
 import {
-  CONTEXT_TIMEOUT_MS,
   ConversationState,
   ConversationStep,
   freshState,
@@ -25,23 +24,20 @@ interface IncomingMessage {
 // Texto do menu principal do canal oficial — mostrado sempre que a
 // conversa entra/reentra em ConversationStep.MENU (primeiro contato,
 // timeout de inatividade, ou escolha não reconhecida).
-const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo.
+const WELCOME_MENU_TEXT = `Olá! Seja muito bem-vinda ao canal oficial da Luana, Consultora de Imagem e Estilo. 🤎
 
 Para direcionar você da melhor forma, responda com o número da opção desejada:
 
-1) Falar com a Luana
-Atendimento, dúvidas ou orientações.
+1️⃣ Falar com a Luana
+Atendimento, suporte e dúvidas.
 
-2) Conhecer o Método Look Pronto
+2️⃣ Conhecer o Método Look Pronto
 Descubra como a mentoria pode transformar a forma como você se veste e se posiciona.
 
-3) Conhecer a Comunidade Look Pronto
+3️⃣ Conhecer a Comunidade Look Pronto
 Veja como funciona e faça parte dela gratuitamente.
 
-4) Já sou cliente
-Suporte, acompanhamento e dúvidas sobre sua mentoria.
-
-5) Outro assunto
+4️⃣ Outro assunto
 Escreva sua mensagem e retornaremos o mais breve possível.`;
 
 const TALK_TO_LUANA_TEXT = `Que bom ter você por aqui!
@@ -63,10 +59,6 @@ A comunidade é totalmente gratuita e foi criada para mulheres que desejam apren
 Entre agora pelo link: https://chat.whatsapp.com/GnQ20LTjh1iC6yF0z9HCZO?mode=gi_t
 
 Seja muito bem-vinda, espero você por lá.`;
-
-const EXISTING_CLIENT_TEXT = `Que bom ter você por aqui novamente!
-
-Como posso ajudar você hoje? Descreva sua dúvida ou necessidade e retornaremos o mais breve possível.`;
 
 const OTHER_SUBJECT_TEXT = `Perfeito! Escreva sua mensagem e, assim que possível, retornaremos para ajudar você da melhor forma.`;
 
@@ -138,8 +130,17 @@ export class ConversationEngineService {
     });
   }
 
+  /**
+   * "Parada" não é mais medido em minutos de silêncio — é a virada do dia
+   * (fuso do negócio). Se a última interação foi num dia anterior, trata
+   * como contato novo e manda o menu de novo; dentro do mesmo dia, continua
+   * de onde parou, mesmo que tenham passado várias horas.
+   */
   private isStale(state: ConversationState): boolean {
-    return Date.now() - new Date(state.updatedAt).getTime() > CONTEXT_TIMEOUT_MS;
+    const tz = 'America/Sao_Paulo';
+    const lastDay = formatInTimeZone(new Date(state.updatedAt), tz, 'yyyy-MM-dd');
+    const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd');
+    return lastDay !== today;
   }
 
   private parseState(raw: any): ConversationState {
@@ -174,11 +175,7 @@ export class ConversationEngineService {
       await this.reply(conversation, COMMUNITY_TEXT);
       return freshState(ConversationStep.MENU);
     }
-    if (choice === '4' || /j[áa] sou cliente/i.test(choice)) {
-      await this.reply(conversation, EXISTING_CLIENT_TEXT);
-      return freshState(ConversationStep.EXISTING_CLIENT_AWAIT_MESSAGE);
-    }
-    if (choice === '5' || /outro assunto/i.test(choice)) {
+    if (choice === '4' || /outro assunto/i.test(choice)) {
       await this.reply(conversation, OTHER_SUBJECT_TEXT);
       return freshState(ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE);
     }
@@ -187,7 +184,7 @@ export class ConversationEngineService {
     return freshState(ConversationStep.MENU);
   }
 
-  /** Marca a conversa como aguardando resposta humana — usado pelas 4 opções do menu que terminam em "retornaremos". */
+  /** Marca a conversa como aguardando resposta humana — usado pelas opções do menu que terminam em "retornaremos". */
   private async handoffToHuman(conversationId: string): Promise<ConversationState> {
     await this.prisma.conversation.update({ where: { id: conversationId }, data: { needsHuman: true } });
     return freshState(ConversationStep.HUMAN_HANDOFF);
@@ -200,7 +197,6 @@ export class ConversationEngineService {
     switch (state.step) {
       case ConversationStep.TALK_TO_LUANA_AWAIT_MESSAGE:
       case ConversationStep.METHOD_AWAIT_ANSWERS:
-      case ConversationStep.EXISTING_CLIENT_AWAIT_MESSAGE:
       case ConversationStep.OTHER_SUBJECT_AWAIT_MESSAGE:
         // A mensagem já foi salva pelo handleIncoming — só falta marcar que
         // precisa de atenção humana. O texto de cada opção já avisou que a
