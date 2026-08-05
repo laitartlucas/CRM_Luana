@@ -174,6 +174,18 @@ export interface PipelineMetrics {
   closedWonCount: number;
 }
 
+export interface ImportedRespondiLead {
+  name?: string;
+  phoneE164?: string;
+  instagram?: string;
+  city?: string;
+  profession?: string;
+  painPoints?: string;
+  desires?: string;
+  objections?: string;
+  leadNotes?: string;
+}
+
 export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
 export type AppointmentLocation = 'PRESENCIAL' | 'ONLINE';
 

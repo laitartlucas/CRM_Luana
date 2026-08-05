@@ -87,6 +87,15 @@ export default defineRailway(() => {
       ENCRYPTION_KEY: preserve(),
       WEB_APP_URL: preserve(),
       API_PUBLIC_URL: preserve(),
+      // Importar lead do Respondi — ver docs/03-fluxos-whatsapp.md.
+      // Webhook (recomendado, /leads/webhooks/respondi/:secret): segredo que
+      // você mesmo gera, não expira.
+      RESPONDI_WEBHOOK_SECRET: preserve(),
+      // Link manual (fallback, /leads/import/respondi): Bearer JWT da sessão
+      // logada da Luana no Respondi (sem API pública oficial). Expira
+      // periodicamente (~7 dias) e precisa ser recapturado via DevTools e
+      // atualizado aqui quando o import passar a dar erro 401/403.
+      RESPONDI_API_TOKEN: preserve(),
     },
   });
 

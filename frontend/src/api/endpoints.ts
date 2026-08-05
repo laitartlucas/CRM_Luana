@@ -8,6 +8,7 @@ import type {
   DashboardKpis,
   FunnelReport,
   FunnelStageEvent,
+  ImportedRespondiLead,
   LeadSource,
   MessageTemplateMeta,
   MessageTemplates,
@@ -63,6 +64,7 @@ export const LeadsApi = {
   update: (id: string, data: Partial<Client>) => api.patch<Client>(`/leads/${id}`, data),
   remove: (id: string) => api.delete(`/leads/${id}`),
   advanceToPipeline: (id: string, reason?: string) => api.post<Client>(`/leads/${id}/advance-to-pipeline`, { reason }),
+  importRespondi: (url: string) => api.post<ImportedRespondiLead>('/leads/import/respondi', { url }),
 };
 
 export const PipelineApi = {
