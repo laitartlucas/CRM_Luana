@@ -64,7 +64,7 @@ export class CalendarSyncController {
     res.clearCookie(STATE_COOKIE, { path: '/' });
 
     await this.calendarSyncService.handleOAuthCallback(code, parsed.professionalId);
-    res.redirect(`${this.config.get<string>('WEB_APP_URL')}/settings?googleCalendar=connected`);
+    res.redirect(`${this.config.get<string>('WEB_APP_URL')}/configuracoes?googleCalendar=connected`);
   }
 
   /**
