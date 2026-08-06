@@ -4,6 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg, EventDropArg, DateSelectArg } from '@fullcalendar/core';
+import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import { AppointmentsApi, ScheduleBlocksApi } from '../api/endpoints';
 import type { Appointment } from '../api/types';
 import { useProfessional } from '../hooks/useProfessional';
@@ -114,7 +115,7 @@ export default function Agenda() {
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
-          locale="pt-br"
+          locale={ptBrLocale}
           allDaySlot={false}
           slotMinTime="07:00:00"
           slotMaxTime="21:00:00"
