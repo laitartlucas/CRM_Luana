@@ -19,7 +19,17 @@ interface IncomingMessage {
   providerMessageId: string;
   text?: string;
   mediaSavedUrl?: string; // já baixada e salva em disco pelo controller, se houver
+  timestamp?: Date; // horário original da mensagem no provider, se disponível (ver isDelayedDelivery)
 }
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+// Qualquer coisa entregue com mais atraso que isso em relação ao momento do
+// processamento não foi digitada agora — é backlog (mensagem não lida
+// entregue quando o número conecta) ou reenvio de histórico da Evolution
+// API. Pequeno de propósito: só separa "isso está sendo digitado agora" de
+// "isso já existia antes" — não confundir com ONE_DAY_MS, que é a janela de
+// inatividade da regra de saudação.
+const DELAYED_DELIVERY_MS = 2 * 60 * 1000;
 
 // Lista de opções do menu, reaproveitada nos três textos abaixo — a saudação
 // completa (WELCOME_MENU_TEXT) só deve ser usada no primeiro contato ou no
@@ -115,7 +125,7 @@ export class ConversationEngineService {
     const conversation = await this.prisma.conversation.upsert({
       where: { channel_externalId: { channel: 'WHATSAPP', externalId: msg.phoneE164 } },
       create: { clientId: client.id, channel: 'WHATSAPP', externalId: msg.phoneE164 },
-      update: { lastMessageAt: new Date() },
+      update: { lastMessageAt: msg.timestamp ?? new Date() },
     });
 
     await this.prisma.message.create({
@@ -136,6 +146,41 @@ export class ConversationEngineService {
         storageUrl: msg.mediaSavedUrl,
         caption: msg.text,
       });
+    }
+
+    // A Evolution API (Baileys) entrega como `messages.upsert` normal tanto
+    // mensagens digitadas agora quanto mensagens não lidas/histórico que já
+    // existiam quando o número foi conectado — o timestamp original é o
+    // único jeito de diferenciar. isDelayedDelivery pega isso (chegou com
+    // atraso perceptível, não foi digitada agora); dentro dessas, só
+    // interessa se a cliente já ficou 24h sem interagir (regra pedida): se
+    // sim, trata como contato novo de verdade e segue o fluxo normal
+    // abaixo (que vai saudar); se não — cliente com conversa em andamento,
+    // que nunca passou pelo bot — fica em silêncio total, sem saudação e
+    // sem "não entendi", só registrando e passando pra atendimento humano.
+    if (this.isDelayedDelivery(msg.timestamp) && !this.isOlderThan(msg.timestamp!, ONE_DAY_MS)) {
+      const { state: existingState, isNew: wasNew } = this.parseState(conversation.state as any);
+      const knownUpdatedAt = new Date(existingState.updatedAt).getTime();
+      if (msg.timestamp!.getTime() > knownUpdatedAt) {
+        // Se a conversa nunca tinha passado pelo motor (histórico puro, de
+        // antes de conectar o número), não dá pra saber em que ponto o
+        // assunto estava — mandar o menu do zero seria tão errado quanto
+        // mandar a saudação. Marca como aguardando atendimento humano e
+        // fica em silêncio (regra 4/7) até a Luana assumir manualmente.
+        const nextState = wasNew ? freshState(ConversationStep.HUMAN_HANDOFF) : existingState;
+        nextState.updatedAt = msg.timestamp!.toISOString();
+        await this.prisma.conversation.update({
+          where: { id: conversation.id },
+          data: {
+            state: nextState as any,
+            ...(wasNew ? { needsHuman: true } : {}),
+          },
+        });
+      }
+      return;
+    }
+
+    if (msg.mediaSavedUrl) {
       await this.reply(conversation.id, 'Recebi sua imagem e já salvei na sua ficha.');
       if (!msg.text) return; // só a foto, sem instrução de texto — não avança o fluxo
     }
@@ -164,16 +209,32 @@ export class ConversationEngineService {
   }
 
   /**
-   * "Parada" não é mais medido em minutos de silêncio — é a virada do dia
-   * (fuso do negócio). Se a última interação foi num dia anterior, trata
-   * como contato novo e manda o menu de novo; dentro do mesmo dia, continua
-   * de onde parou, mesmo que tenham passado várias horas.
+   * "Parada" = 24h corridas sem interação desde a última mensagem, não mais
+   * a virada do dia de calendário — isso evitava reenviar a saudação
+   * poucos minutos depois da meia-noite, mas também disparava ela de novo
+   * pra conversas com poucos minutos de intervalo que só cruzaram a virada
+   * do dia. Se a última interação foi há mais de 24h, trata como contato
+   * novo e manda o menu de novo; dentro da janela de 24h, continua de onde
+   * parou.
    */
   private isStale(state: ConversationState): boolean {
-    const tz = 'America/Sao_Paulo';
-    const lastDay = formatInTimeZone(new Date(state.updatedAt), tz, 'yyyy-MM-dd');
-    const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd');
-    return lastDay !== today;
+    return this.isOlderThan(new Date(state.updatedAt), ONE_DAY_MS);
+  }
+
+  /**
+   * true quando a mensagem chegou com atraso perceptível em relação ao
+   * momento do processamento — sinal de que não foi digitada agora, e sim
+   * um backlog de mensagem não lida entregue ao conectar o número, ou um
+   * reenvio de histórico da Evolution API. Sem timestamp (ex:
+   * simulate/inbound), nunca é tratada como atrasada.
+   */
+  private isDelayedDelivery(timestamp?: Date): boolean {
+    if (!timestamp) return false;
+    return this.isOlderThan(timestamp, DELAYED_DELIVERY_MS);
+  }
+
+  private isOlderThan(timestamp: Date, thresholdMs: number): boolean {
+    return Date.now() - timestamp.getTime() > thresholdMs;
   }
 
   private parseState(raw: any): { state: ConversationState; isNew: boolean } {

@@ -181,6 +181,7 @@ export class WhatsappController {
           providerMessageId: message.id,
           text,
           mediaSavedUrl,
+          timestamp: message.timestamp ? new Date(Number(message.timestamp) * 1000) : undefined,
         });
       }
     }
@@ -216,11 +217,13 @@ export class WhatsappController {
       text = image.caption ?? text;
     }
 
+    const messageTimestamp = Number(data.messageTimestamp);
     await this.conversationEngine.handleIncoming({
       phoneE164,
       providerMessageId: key.id ?? `evo-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       text,
       mediaSavedUrl,
+      timestamp: Number.isFinite(messageTimestamp) && messageTimestamp > 0 ? new Date(messageTimestamp * 1000) : undefined,
     });
   }
 
