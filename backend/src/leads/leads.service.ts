@@ -113,7 +113,9 @@ export class LeadsService {
   }
 
   async create(dto: CreateLeadDto) {
-    const existing = await this.prisma.client.findUnique({ where: { phoneE164: dto.phoneE164 } });
+    const existing = dto.phoneE164
+      ? await this.prisma.client.findUnique({ where: { phoneE164: dto.phoneE164 } })
+      : null;
     if (!existing) {
       return this.prisma.client.create({
         data: {

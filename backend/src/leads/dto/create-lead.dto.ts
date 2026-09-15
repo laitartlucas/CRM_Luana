@@ -8,8 +8,9 @@ export class CreateLeadDto {
   @IsNotEmpty({ message: 'Nome é obrigatório.' })
   name!: string;
 
+  @IsOptional()
   @IsPhoneNumber(undefined, { message: 'WhatsApp deve estar em formato internacional, ex.: +5511999999999' })
-  phoneE164!: string;
+  phoneE164?: string;
 
   @IsOptional()
   @IsString()

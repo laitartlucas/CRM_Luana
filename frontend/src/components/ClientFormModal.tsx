@@ -13,7 +13,7 @@ export function ClientFormModal({ onClose, onCreated }: { onClose: () => void; o
     setError(null);
     setSubmitting(true);
     try {
-      await ClientsApi.create({ name, phoneE164: phone, email: email || undefined });
+      await ClientsApi.create({ name, phoneE164: phone || undefined, email: email || undefined });
       onCreated();
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Não foi possível cadastrar a cliente.');
@@ -29,7 +29,7 @@ export function ClientFormModal({ onClose, onCreated }: { onClose: () => void; o
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <label className="field">
-        WhatsApp (formato internacional)
+        WhatsApp (formato internacional, opcional)
         <input placeholder="+5511999999999" value={phone} onChange={(e) => setPhone(e.target.value)} />
       </label>
       <label className="field">

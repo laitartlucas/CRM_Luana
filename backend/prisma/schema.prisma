@@ -229,7 +229,7 @@ model ScheduleBlock {
 model Client {
   id          String    @id @default(uuid())
   name        String
-  phoneE164   String    @unique
+  phoneE164   String?   @unique
   email       String?
   birthday    DateTime?
 

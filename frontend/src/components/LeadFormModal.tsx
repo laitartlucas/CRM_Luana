@@ -109,7 +109,7 @@ export function LeadFormModal({ onClose, onCreated }: { onClose: () => void; onC
     try {
       await LeadsApi.create({
         name,
-        phoneE164: phone,
+        phoneE164: phone || undefined,
         instagram: instagram || undefined,
         city: city || undefined,
         profession: profession || undefined,
@@ -191,7 +191,7 @@ export function LeadFormModal({ onClose, onCreated }: { onClose: () => void; onC
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="field">
-          WhatsApp (formato internacional)
+          WhatsApp (formato internacional, opcional)
           <input placeholder="+5511999999999" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </label>
         <label className="field">

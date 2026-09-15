@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
@@ -6,6 +6,8 @@ import { WHATSAPP_SEND_QUEUE } from './send-queue/queue.constants';
 
 @Injectable()
 export class WhatsappOutboundService {
+  private readonly logger = new Logger(WhatsappOutboundService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(WHATSAPP_SEND_QUEUE) private readonly sendQueue: Queue,
@@ -13,6 +15,7 @@ export class WhatsappOutboundService {
 
   private async findOrCreateConversation(clientId: string) {
     const client = await this.prisma.client.findUniqueOrThrow({ where: { id: clientId } });
+    if (!client.phoneE164) return null;
     return this.prisma.conversation.upsert({
       where: { channel_externalId: { channel: 'WHATSAPP', externalId: client.phoneE164 } },
       create: { clientId, channel: 'WHATSAPP', externalId: client.phoneE164 },
@@ -23,6 +26,11 @@ export class WhatsappOutboundService {
   /** Enfileira uma mensagem de saída (lembretes, follow-ups, respostas do bot). */
   async sendToClient(clientId: string, text: string): Promise<void> {
     const conversation = await this.findOrCreateConversation(clientId);
+    // Sem WhatsApp cadastrado não há para onde enviar — só ignora (lead/cliente sem número).
+    if (!conversation) {
+      this.logger.warn(`Ignorando envio de WhatsApp: cliente ${clientId} não tem número cadastrado.`);
+      return;
+    }
     await this.sendToConversation(conversation.id, text);
   }
 

@@ -95,12 +95,12 @@ export function AppointmentFormModal({
     setError(null);
     let clientId = selectedClient?.id;
     if (!clientId && newClientMode) {
-      if (!newClientName || !newClientPhone) {
-        setError('Preencha nome e telefone da nova cliente.');
+      if (!newClientName) {
+        setError('Preencha o nome da nova cliente.');
         return;
       }
       try {
-        const created = await ClientsApi.create({ name: newClientName, phoneE164: newClientPhone });
+        const created = await ClientsApi.create({ name: newClientName, phoneE164: newClientPhone || undefined });
         clientId = created.data.id;
       } catch {
         setError('Não foi possível cadastrar a cliente. Verifique o telefone (formato internacional, ex.: +5511999999999).');
@@ -171,7 +171,7 @@ export function AppointmentFormModal({
               <div className="form-grid">
                 <input placeholder="Nome" value={newClientName} onChange={(e) => setNewClientName(e.target.value)} />
                 <input
-                  placeholder="+5511999999999"
+                  placeholder="+5511999999999 (opcional)"
                   value={newClientPhone}
                   onChange={(e) => setNewClientPhone(e.target.value)}
                 />

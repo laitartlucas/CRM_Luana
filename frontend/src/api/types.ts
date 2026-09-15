@@ -84,7 +84,7 @@ export type SuccessStage =
 export interface Client {
   id: string;
   name: string;
-  phoneE164: string;
+  phoneE164?: string | null;
   email?: string | null;
   birthday?: string | null;
   bodyType?: string | null;
