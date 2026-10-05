@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { FunnelStage, Prisma } from '@prisma/client';
+import { FunnelStage } from '@prisma/client';
 import { formatInTimeZone } from 'date-fns-tz';
 import { AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { personSearchFilter } from '../common/utils/person-search';
 import { PrismaService } from '../prisma/prisma.service';
 import { TasksService } from '../tasks/tasks.service';
 
@@ -40,18 +41,10 @@ export class SearchService {
     const term = query.trim();
     if (term.length < MIN_QUERY_LENGTH) return { ...EMPTY };
 
-    // Telefone: compara só os dígitos, para achar "54 9999" dentro de "+5554999990000".
-    const digits = term.replace(/\D/g, '');
-    const personFilters: Prisma.ClientWhereInput[] = [
-      { name: { contains: term, mode: 'insensitive' } },
-      { instagram: { contains: term, mode: 'insensitive' } },
-      { email: { contains: term, mode: 'insensitive' } },
-    ];
-    if (digits.length >= 3) personFilters.push({ phoneE164: { contains: digits } });
 
     const [people, appointments, tasks] = await Promise.all([
       this.prisma.client.findMany({
-        where: { OR: personFilters },
+        where: personSearchFilter(term),
         select: { id: true, name: true, phoneE164: true, instagram: true, funnelStage: true },
         orderBy: { updatedAt: 'desc' },
         take: PER_GROUP * 3,

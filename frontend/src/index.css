@@ -685,3 +685,16 @@ tr:hover td { background: #fbf8f2; }
   .palette-footer { display: none; }
   .palette-backdrop { padding-top: 4vh; }
 }
+
+/* Listagens: filtros, tabela rolável e paginação */
+.list-filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
+.list-filters input { flex: 1 1 240px; max-width: 340px; }
+.list-filters select { flex: 0 1 auto; max-width: 100%; }
+.table-scroll { overflow-x: auto; transition: opacity 0.15s; }
+.table-scroll table { min-width: 560px; }
+.pagination { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+.pagination-range { font-size: 0.85rem; color: var(--color-text-muted); }
+.pagination-pages { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.pagination .btn { padding: 0.4rem 0.8rem; }
+.pagination-number.current { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.pagination-gap { padding: 0 0.25rem; color: var(--color-text-muted); }

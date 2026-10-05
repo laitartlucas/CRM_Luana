@@ -1,8 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Client, FunnelStage, LeadSource, PipelineStage } from '@prisma/client';
+import { Client, FunnelStage, LeadSource, PipelineStage, Prisma } from '@prisma/client';
+import { Paginated, resolvePage, toPage } from '../common/pagination';
+import { personSearchFilter } from '../common/utils/person-search';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
+import { ListLeadsQueryDto } from './dto/list-leads.dto';
 
 // Lead scoring (diferencial de IA) — heurística v1, não é um modelo
 // treinado: cruza origem, sinais qualitativos do relatório da lead,
@@ -32,39 +35,96 @@ const STAGE_PROGRESS_WEIGHT: Partial<Record<PipelineStage, number>> = {
   FOLLOW_UP: 20,
 };
 
+// Colunas que entram no cálculo do leadScore (evita carregar a ficha inteira só para pontuar).
+const SCORE_FIELDS = {
+  id: true,
+  createdAt: true,
+  leadSource: true,
+  painPoints: true,
+  desires: true,
+  objections: true,
+  pipelineStage: true,
+} satisfies Prisma.ClientSelect;
+type ScoreInput = Pick<Client, 'createdAt' | 'leadSource' | 'painPoints' | 'desires' | 'objections' | 'pipelineStage'>;
+
 @Injectable()
 export class LeadsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Módulo 1 + leads já avançadas para o Pipeline (Módulo 2) que ainda não fecharam/perderam. */
-  async list(params: { search?: string; source?: LeadSource }) {
-    const clients = await this.prisma.client.findMany({
-      where: {
-        funnelStage: { in: [FunnelStage.LEAD, FunnelStage.PIPELINE] },
-        leadSource: params.source,
-        OR: params.search
-          ? [
-              { name: { contains: params.search, mode: 'insensitive' } },
-              { phoneE164: { contains: params.search } },
-              { instagram: { contains: params.search, mode: 'insensitive' } },
-            ]
-          : undefined,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  /**
+   * Módulo 1 + leads já avançadas para o Pipeline (Módulo 2) que ainda não fecharam/perderam.
+   *
+   * Ordenar por nome/data pagina direto no banco (e só calcula o score da
+   * página). O leadScore é calculado em código a partir de várias colunas e
+   * eventos, então ordenar por ele precisa pontuar todas as leads que batem
+   * com o filtro — aceitável para o volume do negócio, e só nesse caso.
+   */
+  async list(query: ListLeadsQueryDto): Promise<Paginated<Client & { leadScore: number }>> {
+    const { page, pageSize, skip, take } = resolvePage(query);
+    const sort = query.sort ?? 'leadScore';
+    const direction = query.order ?? (sort === 'name' ? 'asc' : 'desc');
 
-    const firstPipelineEvents = await this.prisma.funnelStageEvent.findMany({
-      where: { clientId: { in: clients.map((c) => c.id) }, module: 'PIPELINE', toStage: PipelineStage.NEW },
-      select: { clientId: true, enteredAt: true },
-    });
-    const firstPipelineByClient = new Map(firstPipelineEvents.map((e) => [e.clientId, e.enteredAt]));
+    const where: Prisma.ClientWhereInput = {
+      AND: [
+        { funnelStage: query.stage ? FunnelStage[query.stage] : { in: [FunnelStage.LEAD, FunnelStage.PIPELINE] } },
+        query.source ? { leadSource: query.source } : {},
+        personSearchFilter(query.search) ?? {},
+      ],
+    };
 
-    return clients
-      .map((client) => ({ ...client, leadScore: this.computeLeadScore(client, firstPipelineByClient.get(client.id)) }))
-      .sort((a, b) => b.leadScore - a.leadScore);
+    if (sort === 'leadScore') {
+      return this.listByScore(where, direction, { page, pageSize, skip, take });
+    }
+
+    const [total, clients] = await Promise.all([
+      this.prisma.client.count({ where }),
+      // id como desempate: sem ele, linhas iguais podem repetir ou sumir entre páginas.
+      this.prisma.client.findMany({ where, orderBy: [{ [sort]: direction }, { id: 'asc' }], skip, take }),
+    ]);
+    const entered = await this.firstPipelineEntries({ clientId: { in: clients.map((c) => c.id) } });
+    const items = clients.map((client) => ({ ...client, leadScore: this.computeLeadScore(client, entered.get(client.id)) }));
+    return toPage(items, total, page, pageSize);
   }
 
-  private computeLeadScore(client: Client, firstPipelineEnteredAt?: Date): number {
+  private async listByScore(
+    where: Prisma.ClientWhereInput,
+    direction: 'asc' | 'desc',
+    { page, pageSize, skip, take }: { page: number; pageSize: number; skip: number; take: number },
+  ) {
+    const [rows, entered] = await Promise.all([
+      this.prisma.client.findMany({ where, select: SCORE_FIELDS }),
+      this.firstPipelineEntries({ client: where }),
+    ]);
+
+    const ranked = rows
+      .map((row) => ({ id: row.id, createdAt: row.createdAt, score: this.computeLeadScore(row, entered.get(row.id)) }))
+      .sort(
+        (a, b) =>
+          (direction === 'desc' ? b.score - a.score : a.score - b.score) ||
+          b.createdAt.getTime() - a.createdAt.getTime() ||
+          a.id.localeCompare(b.id),
+      );
+
+    const pageRows = ranked.slice(skip, skip + take);
+    const full = await this.prisma.client.findMany({ where: { id: { in: pageRows.map((r) => r.id) } } });
+    const byId = new Map(full.map((c) => [c.id, c]));
+    const items = pageRows.flatMap((r) => {
+      const client = byId.get(r.id);
+      return client ? [{ ...client, leadScore: r.score }] : [];
+    });
+    return toPage(items, ranked.length, page, pageSize);
+  }
+
+  /** Quando cada lead entrou no Pipeline (etapa NEW) pela primeira vez — alimenta o bônus de velocidade de resposta. */
+  private async firstPipelineEntries(filter: Prisma.FunnelStageEventWhereInput) {
+    const events = await this.prisma.funnelStageEvent.findMany({
+      where: { ...filter, module: 'PIPELINE', toStage: PipelineStage.NEW },
+      select: { clientId: true, enteredAt: true },
+    });
+    return new Map(events.map((e) => [e.clientId, e.enteredAt]));
+  }
+
+  private computeLeadScore(client: ScoreInput, firstPipelineEnteredAt?: Date): number {
     let score = 0;
     if (client.leadSource) score += SOURCE_WEIGHT[client.leadSource] ?? 0;
     if (client.painPoints) score += 15;

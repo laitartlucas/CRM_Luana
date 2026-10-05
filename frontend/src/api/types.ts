@@ -303,3 +303,19 @@ export interface AppNotification {
   readAt: string | null;
   createdAt: string;
 }
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ListQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}

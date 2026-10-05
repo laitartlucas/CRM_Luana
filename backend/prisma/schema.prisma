@@ -305,6 +305,10 @@ model Client {
   funnelStageEvents FunnelStageEvent[]
   tasks             Task[]
 
+  // Listagens paginadas (leads/clientes): filtram por etapa do funil e ordenam por data ou nome.
+  @@index([funnelStage, createdAt])
+  @@index([funnelStage, name])
+  @@index([leadSource])
   @@map("clients")
 }
 

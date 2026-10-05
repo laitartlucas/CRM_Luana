@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Client, FunnelStage, MediaSource, SuccessStage } from '@prisma/client';
+import { Client, FunnelStage, MediaSource, Prisma, SuccessStage } from '@prisma/client';
+import { Paginated, resolvePage, toPage } from '../common/pagination';
+import { personSearchFilter } from '../common/utils/person-search';
 import { PrismaService } from '../prisma/prisma.service';
 import { LocalStorageService } from '../storage/local-storage.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { ListClientsQueryDto } from './dto/list-clients.dto';
 import { AddMediaDto } from './dto/add-media.dto';
 import { CLIENT_SUCCESS_EVENTS } from './client.events';
 
@@ -19,19 +22,24 @@ export class ClientsService {
   // "Clientes" (ficha completa) = quem já fechou (Módulo 3). Leads e cards
   // do Pipeline Comercial têm suas próprias listas em LeadsService/PipelineService,
   // sobre o mesmo Client — ver funnelStage.
-  async list(search?: string) {
-    return this.prisma.client.findMany({
-      where: {
-        funnelStage: FunnelStage.CLIENT,
-        OR: search
-          ? [
-              { name: { contains: search, mode: 'insensitive' } },
-              { phoneE164: { contains: search } },
-            ]
-          : undefined,
-      },
-      orderBy: { name: 'asc' },
-    });
+  async list(query: ListClientsQueryDto): Promise<Paginated<Client>> {
+    const { page, pageSize, skip, take } = resolvePage(query);
+    const sort = query.sort ?? 'name';
+    const direction = query.order ?? (sort === 'name' ? 'asc' : 'desc');
+
+    const where: Prisma.ClientWhereInput = {
+      AND: [
+        { funnelStage: FunnelStage.CLIENT },
+        query.successStage ? { successStage: query.successStage } : {},
+        personSearchFilter(query.search) ?? {},
+      ],
+    };
+    const [total, items] = await Promise.all([
+      this.prisma.client.count({ where }),
+      // id como desempate: sem ele, linhas com o mesmo nome podem repetir ou sumir entre páginas.
+      this.prisma.client.findMany({ where, orderBy: [{ [sort]: direction }, { id: 'asc' }], skip, take }),
+    ]);
+    return toPage(items, total, page, pageSize);
   }
 
   async findById(id: string) {

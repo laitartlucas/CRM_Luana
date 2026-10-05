@@ -10,10 +10,12 @@ import type {
   FunnelReport,
   FunnelStageEvent,
   ImportedRespondiLead,
+  ListQueryParams,
   LeadSource,
   MessageTemplateMeta,
   MessageTemplates,
   OriginReportEntry,
+  Paginated,
   PipelineBoard,
   PipelineMetrics,
   PipelineStage,
@@ -41,7 +43,7 @@ export const ProfessionalsApi = {
 };
 
 export const ClientsApi = {
-  list: (search?: string) => api.get<Client[]>('/clients', { params: { search } }),
+  list: (params: ListQueryParams & { successStage?: SuccessStage } = {}) => api.get<Paginated<Client>>('/clients', { params }),
   get: (id: string) => api.get<Client>(`/clients/${id}`),
   profile: (id: string) =>
     api.get<{ client: Client; appointments: Appointment[]; media: ClientMedia[] }>(`/clients/${id}/profile`),
@@ -60,7 +62,8 @@ export const ClientsApi = {
 };
 
 export const LeadsApi = {
-  list: (params: { search?: string; source?: LeadSource } = {}) => api.get<Client[]>('/leads', { params }),
+  list: (params: ListQueryParams & { source?: LeadSource; stage?: 'LEAD' | 'PIPELINE' } = {}) =>
+    api.get<Paginated<Client>>('/leads', { params }),
   get: (id: string) => api.get<Client>(`/leads/${id}`),
   profile: (id: string) =>
     api.get<{ lead: Client; stageEvents: FunnelStageEvent[]; appointments: Appointment[]; messages: WhatsappMessage[] }>(
