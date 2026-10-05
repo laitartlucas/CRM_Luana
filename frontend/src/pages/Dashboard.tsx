@@ -116,7 +116,7 @@ export default function Dashboard() {
               }}
             />
           )}
-          <div className="kpi-grid" aria-busy={kpis.loading || metrics.loading}>
+          <div className="kpi-grid kpi-grid-4" aria-busy={kpis.loading || metrics.loading}>
             {kpiTiles.map((tile) => (
               <div key={tile.label} className="card kpi-tile">
                 <span className="value">{tile.value}</span>

@@ -56,12 +56,28 @@ export default function Pipeline() {
 
   if (!board) return <LoadingState />;
 
+  const openCards = PIPELINE_STAGE_ORDER.filter((st) => st !== 'CLOSED_WON' && st !== 'CLOSED_LOST').flatMap((st) => board[st] ?? []);
+  const total = openCards.length;
+  const proposalTotal = openCards.reduce((sum, c) => sum + (c.proposalValue != null ? Number(c.proposalValue) : 0), 0);
+
   return (
-    <div>
+    <div className="page-wide">
       <div className="toolbar">
         <div>
           <h1>Pipeline comercial</h1>
-          <p className="page-subtitle">Arraste os cartões entre as etapas ou use o seletor “Mover para…” em cada um.</p>
+          <p className="page-subtitle">
+            {total} {total === 1 ? 'oportunidade' : 'oportunidades'}
+            {proposalTotal > 0 && (
+              <>
+                {' · '}
+                <strong style={{ color: 'var(--color-text)' }}>
+                  {proposalTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                </strong>{' '}
+                em propostas
+              </>
+            )}
+            {' · '}arraste os cartões ou use “Mover para…”. Etapas vazias ficam recolhidas.
+          </p>
         </div>
       </div>
       {error && (
@@ -88,7 +104,11 @@ export default function Pipeline() {
               </div>
             )}
             <div className="kanban-card-meta">
-              <span className={`score-badge${(client.leadScore ?? 0) >= 60 ? ' high' : ''}`}>Score {client.leadScore ?? 0}</span>
+              {(client.leadScore ?? 0) > 0 ? (
+                <span className={`score-badge${(client.leadScore ?? 0) >= 60 ? ' high' : ''}`}>Score {client.leadScore}</span>
+              ) : (
+                <span />
+              )}
               {client.proposalValue != null && (
                 <span className="kanban-card-value">
                   {Number(client.proposalValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
