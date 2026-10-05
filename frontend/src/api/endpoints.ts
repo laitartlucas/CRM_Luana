@@ -21,6 +21,10 @@ import type {
   Service,
   SuccessBoard,
   SuccessStage,
+  Task,
+  TaskInput,
+  TaskScope,
+  TaskSummary,
   WhatsappMessage,
 } from './types';
 
@@ -197,3 +201,20 @@ export const UsersApi = {
   removeCustomTemplate: (id: string) =>
     api.delete<MessageTemplatesResponse>(`/users/me/message-templates/custom/${id}`),
 };
+
+export const TasksApi = {
+  list: (params: { scope?: TaskScope; assigneeId?: string; clientId?: string; search?: string; limit?: number } = {}) =>
+    api.get<Task[]>('/tasks', { params }),
+  summary: () => api.get<TaskSummary>('/tasks/summary'),
+  create: (data: TaskInput) => api.post<Task>('/tasks', data),
+  update: (id: string, data: Partial<TaskInput>) => api.patch<Task>(`/tasks/${id}`, data),
+  complete: (id: string) => api.post<Task>(`/tasks/${id}/complete`),
+  reopen: (id: string) => api.post<Task>(`/tasks/${id}/reopen`),
+  remove: (id: string) => api.delete<{ ok: true }>(`/tasks/${id}`),
+};
+
+/** Avisa o menu lateral (selo de pendências) que as tarefas mudaram. */
+export const TASKS_CHANGED_EVENT = 'tasks:changed';
+export function notifyTasksChanged() {
+  window.dispatchEvent(new Event(TASKS_CHANGED_EVENT));
+}

@@ -4,6 +4,7 @@ import { LeadsApi } from '../api/endpoints';
 import type { Appointment, Client, FunnelStageEvent, WhatsappMessage } from '../api/types';
 import { LEAD_SOURCE_LABELS, PIPELINE_STAGE_LABELS } from '../constants/pipelineLabels';
 import { SendMessageModal } from '../components/SendMessageModal';
+import { TasksPanel } from '../components/TasksPanel';
 
 const REPORT_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'painPoints', label: 'Principais dores' },
@@ -189,6 +190,8 @@ export default function LeadDetail() {
             ))}
             {messages.length === 0 && <p style={{ color: 'var(--color-text-muted)' }}>Sem mensagens ainda.</p>}
           </div>
+
+          <TasksPanel client={{ id: lead.id, name: lead.name }} />
 
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Agenda</h3>

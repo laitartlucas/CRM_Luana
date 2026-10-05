@@ -13,6 +13,7 @@ import Pipeline from './pages/Pipeline';
 import IntakePage from './pages/IntakePage';
 import Services from './pages/Services';
 import Settings from './pages/Settings';
+import Tasks from './pages/Tasks';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
               <Route path="/leads" element={<Leads />} />
               <Route path="/leads/:id" element={<LeadDetail />} />
               <Route path="/pipeline" element={<Pipeline />} />
+              <Route path="/tarefas" element={<Tasks />} />
               <Route path="/clientes" element={<Clients />} />
               <Route path="/clientes/:id" element={<ClientDetail />} />
               <Route path="/servicos" element={<Services />} />

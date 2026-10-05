@@ -4,6 +4,7 @@ import { ClientsApi, ClientSuccessApi } from '../api/endpoints';
 import type { Appointment, Client, ClientMedia, SuccessStage } from '../api/types';
 import { PAYMENT_METHOD_OPTIONS, SUCCESS_STAGE_LABELS, SUCCESS_STAGE_ORDER } from '../constants/pipelineLabels';
 import { SendMessageModal } from '../components/SendMessageModal';
+import { TasksPanel } from '../components/TasksPanel';
 
 const STYLE_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'bodyType', label: 'Tipo de corpo' },
@@ -206,6 +207,8 @@ export default function ClientDetail() {
               {media.length === 0 && <p style={{ color: 'var(--color-text-muted)' }}>Nenhuma mídia ainda.</p>}
             </div>
           </div>
+
+          <TasksPanel client={{ id: client.id, name: client.name }} />
 
           <div className="card">
             <h3 style={{ marginTop: 0 }}>Histórico de atendimentos</h3>

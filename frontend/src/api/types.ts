@@ -241,3 +241,39 @@ export interface ClientMedia {
   caption?: string | null;
   createdAt: string;
 }
+
+export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH';
+export type TaskStatus = 'OPEN' | 'DONE';
+export type TaskScope = 'overdue' | 'today' | 'upcoming' | 'nodate' | 'done' | 'open';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  dueAt: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  completedAt: string | null;
+  assigneeId: string | null;
+  assignee: { id: string; name: string } | null;
+  clientId: string | null;
+  client: { id: string; name: string; funnelStage: 'LEAD' | 'PIPELINE' | 'CLIENT' | 'LOST' } | null;
+  createdAt: string;
+}
+
+export interface TaskInput {
+  title: string;
+  description?: string | null;
+  dueAt?: string | null;
+  priority?: TaskPriority;
+  assigneeId?: string;
+  clientId?: string | null;
+}
+
+export interface TaskSummary {
+  overdue: number;
+  today: number;
+  upcoming: number;
+  nodate: number;
+  attention: number;
+}

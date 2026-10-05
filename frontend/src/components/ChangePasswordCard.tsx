@@ -51,15 +51,15 @@ export function ChangePasswordCard() {
         Ao trocar a senha você será desconectada de todos os dispositivos e precisará entrar de novo.
       </p>
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '0.75rem', maxWidth: 360 }}>
-        <label>
+        <label className="field">
           Senha atual
           <input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
         </label>
-        <label>
+        <label className="field">
           Nova senha
           <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} required minLength={MIN_LENGTH} />
         </label>
-        <label>
+        <label className="field">
           Confirmar nova senha
           <input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
         </label>

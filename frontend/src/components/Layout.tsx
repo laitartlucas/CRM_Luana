@@ -1,10 +1,13 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { TASKS_CHANGED_EVENT, TasksApi } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Painel', end: true },
   { to: '/leads', label: 'Leads' },
   { to: '/pipeline', label: 'Pipeline' },
+  { to: '/tarefas', label: 'Tarefas', badgeKey: 'tasks' },
   { to: '/agenda', label: 'Agenda' },
   { to: '/clientes', label: 'Clientes' },
   { to: '/servicos', label: 'Serviços' },
@@ -18,8 +21,34 @@ function initials(name?: string) {
   return (first + last).toUpperCase();
 }
 
+/** Quantidade de tarefas do próprio usuário atrasadas ou para hoje (selo no menu). */
+function useTasksAttention() {
+  const [count, setCount] = useState(0);
+  const location = useLocation();
+
+  useEffect(() => {
+    let active = true;
+    const refresh = () =>
+      TasksApi.summary()
+        .then((res) => active && setCount(res.data.attention))
+        .catch(() => undefined);
+    refresh();
+    window.addEventListener(TASKS_CHANGED_EVENT, refresh);
+    const interval = window.setInterval(refresh, 60_000);
+    return () => {
+      active = false;
+      window.removeEventListener(TASKS_CHANGED_EVENT, refresh);
+      window.clearInterval(interval);
+    };
+    // Recarrega ao navegar, para o selo não ficar velho.
+  }, [location.pathname]);
+
+  return count;
+}
+
 export function Layout() {
   const { user, logout } = useAuth();
+  const tasksAttention = useTasksAttention();
 
   return (
     <div className="app-shell">
@@ -42,6 +71,11 @@ export function Layout() {
               {({ isActive }) => (
                 <>
                   <span className="dot">{isActive ? '◈' : '◇'}</span> {item.label}
+                  {item.badgeKey === 'tasks' && tasksAttention > 0 && (
+                    <span className="nav-badge" aria-label={`${tasksAttention} tarefa(s) para hoje ou atrasada(s)`}>
+                      {tasksAttention}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>
