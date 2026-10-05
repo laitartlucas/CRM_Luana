@@ -4,13 +4,13 @@
   --color-border: #e4dccd;
   --color-border-light: #f1ebdf;
   --color-text: #2e2820;
-  --color-text-muted: #8a7f6d;
+  --color-text-muted: #716657; /* 4,7:1 sobre todos os fundos claros (antes #8a7f6d: 3,3–3,9:1) */
   --color-text-soft: #6e6455;
   --color-primary: #8a5a3b;
   --color-primary-dark: #6e4227;
   --color-accent: #c9a24b;
-  --color-danger: #a8542f;
-  --color-success: #6d7a52;
+  --color-danger: #944a28; /* 5,1:1 sobre os fundos de selo (antes #a8542f: 4,2:1) */
+  --color-success: #5f6b45;
 
   --sidebar-bg: #2e2820;
   --sidebar-hover: #3a3226;
@@ -18,7 +18,7 @@
   --sidebar-border: #453c30;
   --sidebar-text: #a79b87;
   --sidebar-text-active: #f3ede2;
-  --sidebar-muted: #7d7362;
+  --sidebar-muted: #b0a590; /* 4,4:1 até sobre o item ativo (antes #7d7362: 2,3–3,1:1) */
 
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Karla', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -312,7 +312,7 @@ input:focus, select:focus, textarea:focus {
 }
 .badge.SCHEDULED { background: #f4e9df; color: var(--color-primary); }
 .badge.CONFIRMED { background: #eef0e4; color: var(--color-success); }
-.badge.COMPLETED { background: #efeae0; color: #7a6f5e; }
+.badge.COMPLETED { background: #efeae0; color: #6e6455; }
 .badge.CANCELLED { background: #f6e6e6; color: #b3423a; }
 .badge.NO_SHOW { background: #f4e2d4; color: var(--color-danger); }
 
@@ -429,6 +429,7 @@ tr:hover td { background: #fbf8f2; }
 .kanban-column.over {
   background: #ede4d6;
 }
+.kanban-column-title { margin: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; }
 .kanban-column-header {
   display: flex;
   justify-content: space-between;
@@ -438,7 +439,7 @@ tr:hover td { background: #fbf8f2; }
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7a6f5e;
+  color: #6e6455;
 }
 .kanban-column-count {
   background: #e2daca;
@@ -446,7 +447,7 @@ tr:hover td { background: #fbf8f2; }
   padding: 0.1rem 0.55rem;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #7a6f5e;
+  color: #6e6455;
 }
 .kanban-column-body {
   padding: 0 0.6rem 0.6rem;
@@ -462,7 +463,7 @@ tr:hover td { background: #fbf8f2; }
   padding: 0.75rem 0.85rem;
   font-size: 0.85rem;
   cursor: grab;
-  touch-action: none;
+  touch-action: manipulation; /* permite rolar a página tocando num cartão; o arrasto por toque exige segurar */
 }
 .kanban-card strong {
   display: block;
@@ -543,7 +544,7 @@ tr:hover td { background: #fbf8f2; }
 .task-due.today { color: var(--color-primary); font-weight: 700; }
 .task-priority { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.1rem 0.5rem; border-radius: var(--radius-sm); }
 .task-priority.HIGH { background: #f4e2d4; color: var(--color-danger); }
-.task-priority.LOW { background: #efeae0; color: #7a6f5e; }
+.task-priority.LOW { background: #efeae0; color: #6e6455; }
 .task-actions { display: flex; gap: 0.75rem; flex-shrink: 0; }
 .task-done .task-title { text-decoration: line-through; color: var(--color-text-muted); }
 @media (max-width: 600px) {
@@ -801,3 +802,29 @@ html, body { overflow-x: clip; }
   white-space: nowrap;
   border: 0;
 }
+
+/* Acessibilidade */
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.sidebar :focus-visible { outline-color: var(--color-accent); }
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.palette-input:focus-visible { outline: none; } /* a caixa de busca já ocupa o diálogo todo */
+.app-content:focus { outline: none; } /* o foco programático no conteúdo (troca de página) não precisa de contorno */
+.section-title { font-size: 1.17em; margin: 1em 0; }
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  font-weight: 700;
+}
+.skip-link:focus { top: 0.75rem; }
+.kanban-move { width: 100%; margin-top: 0.6rem; padding: 0.35rem 0.5rem; font-size: 0.78rem; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+.error-boundary { max-width: 520px; margin: 4rem auto; padding: 0 1.5rem; text-align: center; }

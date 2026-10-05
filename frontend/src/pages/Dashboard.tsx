@@ -120,7 +120,7 @@ export default function Dashboard() {
 
       <div className="two-col">
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Agendamentos de hoje</h3>
+          <h2 className="section-title" style={{ marginTop: 0 }}>Agendamentos de hoje</h2>
           {today.error && <ErrorState message="Não foi possível carregar os agendamentos de hoje." onRetry={today.reload} />}
           {today.loading && !today.data && <LoadingState />}
           {today.data?.length === 0 && <EmptyState>Nenhum agendamento para hoje.</EmptyState>}
@@ -136,7 +136,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Agendamentos no período</h3>
+          <h2 className="section-title" style={{ marginTop: 0 }}>Agendamentos no período</h2>
           {byDay.error && <ErrorState message="Não foi possível carregar o gráfico." onRetry={byDay.reload} />}
           {byDay.loading && !byDay.data && <LoadingState />}
           {byDay.data && (
@@ -158,7 +158,7 @@ export default function Dashboard() {
           <div className="card-grid-2" style={{ marginTop: '1.25rem' }}>
             <div className="card">
               <div className="card-header">
-                <h3 style={{ margin: 0 }}>Funil do Pipeline Comercial</h3>
+                <h2 className="section-title" style={{ margin: 0 }}>Funil do Pipeline Comercial</h2>
                 <ExportButton label="Exportar CSV" path="/reports/funnel.csv" params={{ from, to }} fallbackName="funil.csv" />
               </div>
               {funnel.error && <ErrorState message="Não foi possível carregar o funil." onRetry={funnel.reload} />}
@@ -178,7 +178,7 @@ export default function Dashboard() {
 
             <div className="card">
               <div className="card-header">
-                <h3 style={{ margin: 0 }}>Origem das leads — volume x fechamento</h3>
+                <h2 className="section-title" style={{ margin: 0 }}>Origem das leads — volume x fechamento</h2>
                 <ExportButton label="Exportar CSV" path="/reports/origins.csv" params={{ from, to }} fallbackName="origem-das-leads.csv" />
               </div>
               {origins.error && <ErrorState message="Não foi possível carregar a origem das leads." onRetry={origins.reload} />}

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { TASKS_CHANGED_EVENT, TasksApi } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
 import { isTypingTarget } from '../utils/search';
 import { CommandPalette } from './CommandPalette';
 import { NotificationBell } from './NotificationBell';
+import { LoadingState } from './ui/StateViews';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Painel', end: true },
@@ -56,6 +57,18 @@ export function Layout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const contentRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+
+  // Ao trocar de página, o foco vai para o conteúdo: leitores de tela anunciam a nova tela e quem usa
+  // teclado não fica preso no link do menu que acabou de clicar. (Não na carga inicial.)
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    contentRef.current?.focus({ preventScroll: true });
+  }, [location.pathname]);
 
   // Menu em gaveta (celular): fecha ao navegar, com Esc, e trava a rolagem da página enquanto aberto.
   useEffect(() => setMenuOpen(false), [location.pathname]);
@@ -94,6 +107,16 @@ export function Layout() {
 
   return (
     <div className="app-shell">
+      <a
+        className="skip-link"
+        href="#conteudo"
+        onClick={(e) => {
+          e.preventDefault();
+          contentRef.current?.focus();
+        }}
+      >
+        Pular para o conteúdo
+      </a>
       <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="main-menu" aria-label="Menu principal">
         <div className="sidebar-brand">
           <img src="/logo.png" alt="Luana Laitart" />
@@ -112,7 +135,7 @@ export function Layout() {
             >
               {({ isActive }) => (
                 <>
-                  <span className="dot">{isActive ? '◈' : '◇'}</span> {item.label}
+                  <span className="dot" aria-hidden="true">{isActive ? '◈' : '◇'}</span> {item.label}
                   {item.badgeKey === 'tasks' && tasksAttention > 0 && (
                     <span className="nav-badge" aria-label={`${tasksAttention} tarefa(s) para hoje ou atrasada(s)`}>
                       {tasksAttention}
@@ -125,7 +148,7 @@ export function Layout() {
         </nav>
         <div className="sidebar-footer">
           <NavLink to="/configuracoes" className={({ isActive }) => (isActive ? 'sidebar-footer-link active' : 'sidebar-footer-link')}>
-            <span className="dot">◇</span> Configurações
+            <span className="dot" aria-hidden="true">◇</span> Configurações
           </NavLink>
           <div className="sidebar-user">
             <div className="sidebar-user-avatar">{initials(user?.name ?? user?.email)}</div>
@@ -152,7 +175,7 @@ export function Layout() {
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <button className="search-trigger" onClick={() => setPaletteOpen(true)} aria-label="Buscar (Ctrl+K)">
+          <button className="search-trigger" onClick={() => setPaletteOpen(true)} aria-keyshortcuts="Control+K">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
               <path d="m21 21-4.3-4.3" />
@@ -162,8 +185,11 @@ export function Layout() {
           </button>
           <NotificationBell />
         </header>
-        <main className="app-content">
-          <Outlet />
+        <main className="app-content" id="conteudo" tabIndex={-1} ref={contentRef}>
+          {/* As telas são carregadas sob demanda; o menu e a barra superior continuam na tela enquanto isso. */}
+          <Suspense fallback={<LoadingState />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}

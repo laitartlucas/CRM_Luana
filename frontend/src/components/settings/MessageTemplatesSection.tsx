@@ -120,7 +120,7 @@ export function MessageTemplatesSection() {
   return (
     <>
       <div className="card" style={{ marginBottom: '1.25rem' }}>
-        <h3 style={{ marginTop: 0 }}>Padrão de mensagens do WhatsApp</h3>
+        <h2 className="section-title" style={{ marginTop: 0 }}>Padrão de mensagens do WhatsApp</h2>
         <p style={hint}>
           Personalize o texto que a cliente recebe automaticamente em cada situação. Use as variáveis entre chaves duplas —
           elas são substituídas pelos dados reais na hora do envio.
@@ -183,7 +183,7 @@ export function MessageTemplatesSection() {
       </div>
 
       <div className="card" style={{ marginBottom: '1.25rem' }}>
-        <h3 style={{ marginTop: 0 }}>Mensagens personalizadas</h3>
+        <h2 className="section-title" style={{ marginTop: 0 }}>Mensagens personalizadas</h2>
         <p style={hint}>
           Crie quantas mensagens quiser, com o nome que preferir — elas aparecem junto com os modelos prontos na hora de
           enviar mensagem para uma cliente ou lead.

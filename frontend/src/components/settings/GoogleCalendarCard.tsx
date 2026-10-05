@@ -61,7 +61,7 @@ export function GoogleCalendarCard({ userId }: { userId: string }) {
 
   return (
     <div className="card" style={{ marginBottom: '1.25rem' }}>
-      <h3 style={{ marginTop: 0 }}>Google Calendar</h3>
+      <h2 className="section-title" style={{ marginTop: 0 }}>Google Calendar</h2>
       {health?.connected ? (
         <>
           <p>

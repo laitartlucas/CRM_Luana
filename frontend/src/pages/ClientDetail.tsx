@@ -148,7 +148,7 @@ export default function ClientDetail() {
 
       <div className="two-col">
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Ficha de estilo</h3>
+          <h2 className="section-title" style={{ marginTop: 0 }}>Ficha de estilo</h2>
           <div className="form-grid">
             <label className="field">
               Nome
@@ -185,7 +185,7 @@ export default function ClientDetail() {
             </button>
           </div>
 
-          <h3>Sucesso do Cliente</h3>
+          <h2 className="section-title">Sucesso do Cliente</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {SUCCESS_STAGE_ORDER.map((stage) => (
               <button
@@ -206,7 +206,7 @@ export default function ClientDetail() {
             <input readOnly value={intakeLink} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
           )}
 
-          <h3>LGPD</h3>
+          <h2 className="section-title">LGPD</h2>
           <p style={{ fontSize: '0.85rem' }}>
             Consentimento WhatsApp: <strong>{client.whatsappConsent ? 'Sim' : 'Não'}</strong>
           </p>
@@ -217,7 +217,7 @@ export default function ClientDetail() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Fotos e mood boards</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Fotos e mood boards</h2>
             <label className="btn secondary" style={{ display: 'inline-block', marginBottom: '0.85rem' }}>
               + Enviar foto
               <input type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} />
@@ -233,7 +233,7 @@ export default function ClientDetail() {
           <TasksPanel client={{ id: client.id, name: client.name }} />
 
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Histórico de atendimentos</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Histórico de atendimentos</h2>
             {appointments.map((a) => (
               <div className="appointment-row" key={a.id}>
                 <div>

@@ -79,9 +79,9 @@ function ConfirmDialog({ title, message, confirmLabel = 'Confirmar', cancelLabel
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
-        <h3 id="confirm-title" style={{ marginTop: 0 }}>
+        <h2 id="confirm-title" className="section-title" style={{ marginTop: 0 }}>
           {title}
-        </h3>
+        </h2>
         {message && (
           <p id="confirm-message" style={{ color: 'var(--color-text-soft)' }}>
             {message}

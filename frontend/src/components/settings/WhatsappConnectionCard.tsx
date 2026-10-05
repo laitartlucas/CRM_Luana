@@ -48,7 +48,7 @@ export function WhatsappConnectionCard() {
 
   return (
     <div className="card" style={{ marginBottom: '1.25rem' }}>
-      <h3 style={{ marginTop: 0 }}>WhatsApp — conectar por QR Code</h3>
+      <h2 className="section-title" style={{ marginTop: 0 }}>WhatsApp — conectar por QR Code</h2>
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
         Conecta o número de WhatsApp que você já usa no celular (via Evolution API), sem precisar migrar pra Meta Cloud API.
       </p>

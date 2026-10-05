@@ -30,7 +30,7 @@ export function WhatsappSimulatorCard() {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0 }}>WhatsApp — simulador de conversa</h3>
+      <h2 className="section-title" style={{ marginTop: 0 }}>WhatsApp — simulador de conversa</h2>
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
         Enquanto a conta Meta Business não está aprovada, use este simulador para testar o fluxo de agendar/remarcar/cancelar
         do jeito que uma cliente veria no WhatsApp de verdade (ver <code>WHATSAPP_PROVIDER=mock</code> no backend).

@@ -65,6 +65,7 @@ export default function Pipeline() {
       <KanbanBoard
         columns={COLUMNS}
         itemsByColumn={board}
+        getItemLabel={(client: Client) => client.name || 'lead sem nome'}
         onMove={handleMove}
         renderCard={(client: Client) => (
           <Link to={`/leads/${client.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>

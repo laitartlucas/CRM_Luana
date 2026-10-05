@@ -1,7 +1,7 @@
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SearchApi } from '../api/endpoints';
-import type { SearchResults } from '../api/types';
+import type { SearchHit, SearchResults } from '../api/types';
 import { flattenResults, MIN_QUERY_LENGTH, moveActive, SECTION_LABELS } from '../utils/search';
 
 /** Busca global (Ctrl+K): leads, clientes, agendamentos e tarefas, com navegação por teclado. */
@@ -65,7 +65,13 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     }
   }
 
-  let lastSection: string | null = null;
+  const groups = useMemo(() => {
+    const bySection = new Map<keyof SearchResults, Array<{ hit: SearchHit; index: number }>>();
+    flat.forEach(({ section, hit }, index) => {
+      bySection.set(section, [...(bySection.get(section) ?? []), { hit, index }]);
+    });
+    return Array.from(bySection, ([section, items]) => ({ section, items }));
+  }, [flat]);
 
   return (
     <div className="palette-backdrop" onClick={onClose}>
@@ -82,7 +88,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           className="palette-input"
           role="combobox"
           aria-expanded={flat.length > 0}
-          aria-controls="palette-list"
+          aria-controls={flat.length > 0 ? 'palette-list' : undefined}
           aria-activedescendant={flat.length > 0 ? `palette-option-${active}` : undefined}
           aria-label="Buscar leads, clientes, agendamentos e tarefas"
           placeholder="Buscar por nome, telefone, Instagram, tarefa…"
@@ -91,38 +97,50 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
           autoComplete="off"
         />
 
-        <div className="palette-body" id="palette-list" role="listbox" aria-label="Resultados">
+        <div className="palette-body">
           {!searchable && <p className="palette-hint">Digite pelo menos {MIN_QUERY_LENGTH} letras para buscar.</p>}
-          {searchable && loading && flat.length === 0 && <p className="palette-hint">Buscando…</p>}
+          {searchable && loading && flat.length === 0 && (
+            <p className="palette-hint" role="status">
+              Buscando…
+            </p>
+          )}
           {error && (
             <p className="palette-hint error-text" role="alert">
               Não foi possível buscar agora. Tente novamente.
             </p>
           )}
           {searchable && !loading && !error && results && flat.length === 0 && (
-            <p className="palette-hint">Nada encontrado para “{term}”.</p>
+            <p className="palette-hint" role="status">
+              Nada encontrado para “{term}”.
+            </p>
           )}
 
-          {flat.map(({ section, hit }, index) => {
-            const heading = section !== lastSection ? SECTION_LABELS[section] : null;
-            lastSection = section;
-            return (
-              <div key={`${section}-${hit.id}`}>
-                {heading && <div className="palette-section">{heading}</div>}
-                <div
-                  id={`palette-option-${index}`}
-                  role="option"
-                  aria-selected={index === active}
-                  className={`palette-option${index === active ? ' active' : ''}`}
-                  onMouseEnter={() => setActive(index)}
-                  onClick={() => open(index)}
-                >
-                  <span className="palette-title">{hit.title}</span>
-                  {hit.subtitle && <span className="palette-subtitle">{hit.subtitle}</span>}
+          {/* O listbox só existe com resultados: um listbox vazio é inválido para leitores de tela. */}
+          {flat.length > 0 && (
+            <div id="palette-list" role="listbox" aria-label="Resultados">
+              {groups.map(({ section, items }) => (
+                <div key={section} role="group" aria-label={SECTION_LABELS[section]}>
+                  <div className="palette-section" aria-hidden="true">
+                    {SECTION_LABELS[section]}
+                  </div>
+                  {items.map(({ hit, index }) => (
+                    <div
+                      key={hit.id}
+                      id={`palette-option-${index}`}
+                      role="option"
+                      aria-selected={index === active}
+                      className={`palette-option${index === active ? ' active' : ''}`}
+                      onMouseEnter={() => setActive(index)}
+                      onClick={() => open(index)}
+                    >
+                      <span className="palette-title">{hit.title}</span>
+                      {hit.subtitle && <span className="palette-subtitle">{hit.subtitle}</span>}
+                    </div>
+                  ))}
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="palette-footer" aria-hidden="true">

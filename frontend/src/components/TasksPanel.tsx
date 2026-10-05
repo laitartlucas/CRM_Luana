@@ -38,7 +38,7 @@ export function TasksPanel({ client }: { client: { id: string; name: string } })
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-        <h3 style={{ margin: 0 }}>Tarefas</h3>
+        <h2 className="section-title" style={{ margin: 0 }}>Tarefas</h2>
         <button className="btn secondary" onClick={() => setCreating(true)}>
           + Nova tarefa
         </button>

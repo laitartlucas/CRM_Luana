@@ -35,7 +35,7 @@ export function DangerZoneCard() {
 
   return (
     <div className="card" style={{ marginTop: '1.25rem', borderColor: 'var(--color-danger)' }}>
-      <h3 style={{ marginTop: 0, color: 'var(--color-danger)' }}>Zona de risco</h3>
+      <h2 className="section-title" style={{ marginTop: 0, color: 'var(--color-danger)' }}>Zona de risco</h2>
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
         Apaga permanentemente TODAS as clientes e leads cadastradas, junto com agendamentos, conversas e mensagens ligados a
         elas. Não existe "desfazer". Para confirmar, digite <strong>{WIPE_CONFIRMATION_PHRASE}</strong> abaixo.

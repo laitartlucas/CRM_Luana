@@ -126,7 +126,7 @@ export default function LeadDetail() {
 
       <div className="two-col">
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Cadastro</h3>
+          <h2 className="section-title" style={{ marginTop: 0 }}>Cadastro</h2>
           <div className="form-grid">
             <label className="field">
               Nome
@@ -146,7 +146,7 @@ export default function LeadDetail() {
             </label>
           </div>
 
-          <h3>Relatório da lead</h3>
+          <h2 className="section-title">Relatório da lead</h2>
           <div className="form-grid">
             {REPORT_FIELDS.map((f) => (
               <label className="field" key={f.key}>
@@ -174,7 +174,7 @@ export default function LeadDetail() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Histórico de etapas</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Histórico de etapas</h2>
             {stageEvents.map((ev) => (
               <div className="appointment-row" key={ev.id}>
                 <div>
@@ -190,7 +190,7 @@ export default function LeadDetail() {
           </div>
 
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Conversa no WhatsApp</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Conversa no WhatsApp</h2>
             {messages.map((m) => (
               <div className="appointment-row" key={m.id}>
                 <div>
@@ -207,7 +207,7 @@ export default function LeadDetail() {
           <TasksPanel client={{ id: lead.id, name: lead.name }} />
 
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Agenda</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Agenda</h2>
             {appointments.map((a) => (
               <div className="appointment-row" key={a.id}>
                 <div>

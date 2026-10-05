@@ -46,7 +46,7 @@ export function ChangePasswordCard() {
 
   return (
     <div className="card" style={{ marginBottom: '1.25rem' }}>
-      <h3 style={{ marginTop: 0 }}>Alterar senha</h3>
+      <h2 className="section-title" style={{ marginTop: 0 }}>Alterar senha</h2>
       <p style={{ marginTop: 0, color: "var(--color-text-muted)" }}>
         Ao trocar a senha você será desconectada de todos os dispositivos e precisará entrar de novo.
       </p>

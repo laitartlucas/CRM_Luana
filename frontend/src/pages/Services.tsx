@@ -65,7 +65,7 @@ export default function Services() {
               <th>Duração</th>
               <th>Preço</th>
               <th>Status</th>
-              <th />
+              <th><span className="visually-hidden">Ações</span></th>
             </tr>
           </thead>
           <tbody>
@@ -93,7 +93,7 @@ export default function Services() {
 
       {form && (
         <div className="card" style={{ marginTop: '1rem', maxWidth: 420 }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Editar serviço' : 'Novo serviço'}</h3>
+          <h2 className="section-title" style={{ marginTop: 0 }}>{editingId ? 'Editar serviço' : 'Novo serviço'}</h2>
           <div className="form-grid">
             <label className="field">
               Nome

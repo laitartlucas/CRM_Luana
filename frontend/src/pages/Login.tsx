@@ -35,7 +35,7 @@ export default function Login() {
 
   return (
     <div className="login-shell">
-      <div className="login-brand-panel">
+      <aside className="login-brand-panel" aria-label="Luana Laitart">
         <div className="login-brand-eyebrow">LUANA LAITART</div>
         <div className="login-brand-center">
           <img src="/logo.png" alt="Luana Laitart" />
@@ -52,8 +52,8 @@ export default function Login() {
           <span>© {new Date().getFullYear()} Luana Laitart</span>
           <span>luanalaitart.com</span>
         </div>
-      </div>
-      <div className="login-form-panel">
+      </aside>
+      <main className="login-form-panel">
         <form className="login-form-card" onSubmit={handleSubmit}>
           <div>
             <h1>Bem-vinda de volta</h1>
@@ -79,12 +79,16 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
-          {error && <span className="error-text">{error}</span>}
+          {error && (
+            <span className="error-text" role="alert">
+              {error}
+            </span>
+          )}
           <button className="btn" type="submit" disabled={loading} style={{ height: 52 }}>
             {loading ? 'ENTRANDO...' : 'ENTRAR'}
           </button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

@@ -128,7 +128,14 @@ export default function Agenda() {
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
           select={handleSelect}
-          datesSet={(arg) => loadRange(arg.start, arg.end)}
+          datesSet={(arg) => {
+            loadRange(arg.start, arg.end);
+            // O FullCalendar marca os ícones das setas como role="img" sem texto; os botões já têm nome próprio.
+            document.querySelectorAll('.fc .fc-icon').forEach((icon) => {
+              icon.removeAttribute('role');
+              icon.setAttribute('aria-hidden', 'true');
+            });
+          }}
         />
       </div>
 
