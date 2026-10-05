@@ -4,6 +4,7 @@ import type { Task, TaskScope, TaskSummary } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { TaskFormModal } from '../components/TaskFormModal';
 import { TaskRow } from '../components/TaskRow';
+import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateViews';
 import { useTaskActions } from '../hooks/useTaskActions';
 
 type Tab = { scope: TaskScope; label: string; count?: keyof TaskSummary };
@@ -111,24 +112,11 @@ export default function Tasks() {
           )}
         </div>
 
-        {actions.error && (
-          <p className="error-text" role="alert">
-            {actions.error}
-          </p>
-        )}
-        {loadError && (
-          <p className="error-text" role="alert">
-            Não foi possível carregar as tarefas.{' '}
-            <button className="btn-link" onClick={load}>
-              Tentar de novo
-            </button>
-          </p>
-        )}
-        {loading && !loadError && <p style={{ color: 'var(--color-text-muted)' }}>Carregando…</p>}
+        {actions.error && <ErrorState message={actions.error} />}
+        {loadError && <ErrorState message="Não foi possível carregar as tarefas." onRetry={load} />}
+        {loading && !loadError && <LoadingState />}
         {!loading && !loadError && tasks.length === 0 && (
-          <p style={{ color: 'var(--color-text-muted)' }}>
-            {search.trim() ? 'Nenhuma tarefa encontrada para essa busca.' : EMPTY_TEXT[scope]}
-          </p>
+          <EmptyState>{search.trim() ? 'Nenhuma tarefa encontrada para essa busca.' : EMPTY_TEXT[scope]}</EmptyState>
         )}
 
         {!loading &&

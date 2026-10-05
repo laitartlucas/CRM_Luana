@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { LeadsApi } from '../api/endpoints';
 import type { Appointment, Client, FunnelStageEvent, WhatsappMessage } from '../api/types';
 import { LEAD_SOURCE_LABELS, PIPELINE_STAGE_LABELS } from '../constants/pipelineLabels';
+import { errorMessage, useToast } from '../components/ui/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { SendMessageModal } from '../components/SendMessageModal';
 import { TasksPanel } from '../components/TasksPanel';
 
@@ -16,6 +18,8 @@ const REPORT_FIELDS: Array<{ key: keyof Client; label: string }> = [
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [lead, setLead] = useState<Client | null>(null);
   const [stageEvents, setStageEvents] = useState<FunnelStageEvent[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -55,6 +59,9 @@ export default function LeadDetail() {
         objections: lead.objections,
         leadNotes: lead.leadNotes,
       });
+      toast.success('Lead salva.');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível salvar a lead.'));
     } finally {
       setSaving(false);
     }
@@ -66,6 +73,8 @@ export default function LeadDetail() {
     try {
       await LeadsApi.advanceToPipeline(id);
       navigate('/pipeline');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível enviar a lead para o Pipeline.'));
     } finally {
       setAdvancing(false);
     }
@@ -73,15 +82,19 @@ export default function LeadDetail() {
 
   async function handleDelete() {
     if (!id || !lead) return;
-    if (!window.confirm(`Excluir ${lead.name || 'esta lead'} definitivamente? Essa ação não pode ser desfeita.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Excluir ${lead.name || 'esta lead'}?`,
+      message: 'Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       await LeadsApi.remove(id);
       navigate('/leads');
     } catch (err: any) {
-      window.alert(err?.response?.data?.message ?? 'Não foi possível excluir esta lead.');
+      toast.error(errorMessage(err, 'Não foi possível excluir esta lead.'));
       setDeleting(false);
     }
   }

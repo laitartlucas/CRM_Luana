@@ -4,6 +4,9 @@ import { LeadsApi } from '../api/endpoints';
 import type { Client, LeadSource } from '../api/types';
 import { LEAD_SOURCE_LABELS } from '../constants/pipelineLabels';
 import { LeadFormModal } from '../components/LeadFormModal';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { EmptyState, ErrorState, LoadingState, TableState } from '../components/ui/StateViews';
+import { errorMessage, useToast } from '../components/ui/Toast';
 import { Pagination } from '../components/Pagination';
 import { SendMessageModal } from '../components/SendMessageModal';
 import { usePagedList } from '../hooks/usePagedList';
@@ -29,7 +32,8 @@ export default function Leads() {
   const [creating, setCreating] = useState(false);
   const [messagingLead, setMessagingLead] = useState<Client | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   const list = usePagedList<Client>(LIST_CONFIG, (q) =>
     LeadsApi.list({
@@ -44,16 +48,20 @@ export default function Leads() {
   const leads = list.data?.items ?? [];
 
   async function handleDelete(lead: Client) {
-    if (!window.confirm(`Excluir ${lead.name || 'esta lead'} definitivamente? Essa ação não pode ser desfeita.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Excluir ${lead.name || 'esta lead'}?`,
+      message: 'Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
     setDeletingId(lead.id);
-    setActionError(null);
     try {
       await LeadsApi.remove(lead.id);
+      toast.success('Lead excluída.');
       list.reload();
-    } catch (err: any) {
-      setActionError(err?.response?.data?.message ?? 'Não foi possível excluir esta lead.');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível excluir esta lead.'));
     } finally {
       setDeletingId(null);
     }
@@ -106,19 +114,7 @@ export default function Leads() {
           )}
         </div>
 
-        {actionError && (
-          <p className="error-text" role="alert">
-            {actionError}
-          </p>
-        )}
-        {list.error && (
-          <p className="error-text" role="alert">
-            Não foi possível carregar as leads.{' '}
-            <button className="btn-link" onClick={list.reload}>
-              Tentar de novo
-            </button>
-          </p>
-        )}
+        {list.error && <ErrorState message="Não foi possível carregar as leads." onRetry={list.reload} />}
 
         <div className="table-scroll" style={{ opacity: list.loading && list.data ? 0.6 : 1 }} aria-busy={list.loading}>
           <table>
@@ -158,18 +154,14 @@ export default function Leads() {
                 </tr>
               ))}
               {list.loading && !list.data && (
-                <tr>
-                  <td colSpan={6} style={{ color: 'var(--color-text-muted)' }}>
-                    Carregando…
-                  </td>
-                </tr>
+                <TableState colSpan={6}>
+                  <LoadingState />
+                </TableState>
               )}
               {!list.loading && !list.error && leads.length === 0 && (
-                <tr>
-                  <td colSpan={6} style={{ color: 'var(--color-text-muted)' }}>
-                    {list.filtersActive ? 'Nenhuma lead encontrada com esses filtros.' : 'Nenhuma lead cadastrada ainda.'}
-                  </td>
-                </tr>
+                <TableState colSpan={6}>
+                  <EmptyState>{list.filtersActive ? 'Nenhuma lead encontrada com esses filtros.' : 'Nenhuma lead cadastrada ainda.'}</EmptyState>
+                </TableState>
               )}
             </tbody>
           </table>

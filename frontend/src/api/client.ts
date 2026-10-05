@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { loginUrlFor } from '../utils/auth';
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
@@ -15,7 +16,10 @@ api.interceptors.response.use(
         await api.post('/auth/refresh');
         return api(original);
       } catch {
-        window.location.href = '/login';
+        // Sessão expirou de vez: volta ao login lembrando onde a pessoa estava (a menos que já esteja nele).
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = loginUrlFor(window.location.pathname + window.location.search);
+        }
       }
     }
     return Promise.reject(error);

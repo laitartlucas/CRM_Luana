@@ -355,11 +355,6 @@ tr:hover td { background: #fbf8f2; }
 @media (max-width: 800px) {
   .two-col, .card-grid-2 { grid-template-columns: 1fr; }
   .app-content { padding: 1.5rem; }
-  .app-shell { flex-direction: column; }
-  .sidebar { width: 100%; min-width: 0; height: auto; position: static; flex-direction: row; align-items: center; padding: 0.75rem 1rem; gap: 1rem; }
-  .sidebar-brand { border-bottom: none; padding: 0; }
-  .sidebar-nav { flex-direction: row; padding: 0; overflow-x: auto; flex: 1; }
-  .sidebar-footer { display: none; }
 }
 
 .media-grid {
@@ -698,3 +693,92 @@ tr:hover td { background: #fbf8f2; }
 .pagination .btn { padding: 0.4rem 0.8rem; }
 .pagination-number.current { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 .pagination-gap { padding: 0 0.25rem; color: var(--color-text-muted); }
+
+/* Menu em gaveta no celular */
+.menu-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-soft);
+}
+.menu-button:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.sidebar-overlay { display: none; }
+@media (max-width: 800px) {
+  .menu-button { display: flex; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(280px, 85vw);
+    min-width: 0;
+    height: 100dvh;
+    z-index: 70;
+    transform: translateX(-100%);
+    visibility: hidden; /* fechado, os links não recebem foco do teclado */
+    transition: transform 0.2s ease, visibility 0s linear 0.2s;
+    overflow-y: auto;
+  }
+  .sidebar.open { transform: none; visibility: visible; transition: transform 0.2s ease; box-shadow: 8px 0 32px rgba(46, 40, 32, 0.35); }
+  .sidebar-overlay { display: block; position: fixed; inset: 0; background: rgba(46, 40, 32, 0.5); z-index: 65; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .sidebar.open { transition: none; }
+}
+
+/* Toasts e estados de dados */
+.toast-region {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(380px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(46, 40, 32, 0.2);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.toast.success { border-left-color: var(--color-success); }
+.toast.error { border-left-color: var(--color-danger); }
+.toast.info { border-left-color: var(--color-primary); }
+.toast-close { background: none; border: none; color: var(--color-text-muted); padding: 0; line-height: 1; }
+.state-view { margin: 0; padding: 1rem 0.25rem; color: var(--color-text-muted); font-size: 0.9rem; }
+.state-view.error-text { color: #b3423a; }
+.confirm-dialog { max-width: 420px; }
+.template-variable {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  background: var(--color-border-light);
+  color: var(--color-text);
+  border: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.template-variable:hover { background: #f4e9df; color: var(--color-primary); }
+/* Flex items não encolhem abaixo do conteúdo sem isto: no celular a barra superior estourava a largura da tela. */
+.topbar > * { min-width: 0; }
+.search-trigger { min-width: 0; }
+.bell, .menu-button { flex-shrink: 0; }
+html, body { overflow-x: clip; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { TASKS_CHANGED_EVENT, TasksApi } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
 import { isTypingTarget } from '../utils/search';
@@ -53,6 +53,29 @@ export function Layout() {
   const { user, logout } = useAuth();
   const tasksAttention = useTasksAttention();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Menu em gaveta (celular): fecha ao navegar, com Esc, e trava a rolagem da página enquanto aberto.
+  useEffect(() => setMenuOpen(false), [location.pathname]);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
+
+  async function handleLogout() {
+    await logout().catch(() => undefined);
+    // Saída explícita vai para o login limpo (sem "voltar para a tela anterior").
+    navigate('/login', { replace: true });
+  }
 
   // Ctrl/Cmd+K abre a busca de qualquer tela; "/" também, desde que não esteja digitando em um campo.
   useEffect(() => {
@@ -71,7 +94,7 @@ export function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="main-menu" aria-label="Menu principal">
         <div className="sidebar-brand">
           <img src="/logo.png" alt="Luana Laitart" />
           <div>
@@ -108,15 +131,27 @@ export function Layout() {
             <div className="sidebar-user-avatar">{initials(user?.name ?? user?.email)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className="sidebar-user-name">{user?.name ?? user?.email}</div>
-              <button className="btn-link" style={{ fontSize: '0.72rem', color: 'var(--sidebar-muted)' }} onClick={() => logout()}>
+              <button className="btn-link" style={{ fontSize: '0.72rem', color: 'var(--sidebar-muted)' }} onClick={handleLogout}>
                 Sair
               </button>
             </div>
           </div>
         </div>
       </aside>
+      {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
       <div className="app-main">
         <header className="topbar">
+          <button
+            className="menu-button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={menuOpen}
+            aria-controls="main-menu"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <button className="search-trigger" onClick={() => setPaletteOpen(true)} aria-label="Buscar (Ctrl+K)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />

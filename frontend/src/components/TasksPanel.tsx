@@ -4,6 +4,7 @@ import type { Task } from '../api/types';
 import { useTaskActions } from '../hooks/useTaskActions';
 import { TaskFormModal } from './TaskFormModal';
 import { TaskRow } from './TaskRow';
+import { EmptyState, ErrorState, LoadingState } from './ui/StateViews';
 
 /** Tarefas de uma lead/cliente, para a ficha dela: lista as abertas e as concluídas e permite criar uma nova. */
 export function TasksPanel({ client }: { client: { id: string; name: string } }) {
@@ -43,23 +44,10 @@ export function TasksPanel({ client }: { client: { id: string; name: string } })
         </button>
       </div>
 
-      {actions.error && (
-        <p className="error-text" role="alert">
-          {actions.error}
-        </p>
-      )}
-      {loadError && (
-        <p className="error-text" role="alert">
-          Não foi possível carregar as tarefas.{' '}
-          <button className="btn-link" onClick={load}>
-            Tentar de novo
-          </button>
-        </p>
-      )}
-      {loading && <p style={{ color: 'var(--color-text-muted)' }}>Carregando…</p>}
-      {!loading && !loadError && open.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)' }}>Nenhuma tarefa em aberto.</p>
-      )}
+      {actions.error && <ErrorState message={actions.error} />}
+      {loadError && <ErrorState message="Não foi possível carregar as tarefas." onRetry={load} />}
+      {loading && <LoadingState />}
+      {!loading && !loadError && open.length === 0 && <EmptyState>Nenhuma tarefa em aberto.</EmptyState>}
 
       {open.map((t) => (
         <TaskRow key={t.id} task={t} busy={actions.busyId === t.id} {...rowProps} />

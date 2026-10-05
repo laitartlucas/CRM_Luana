@@ -1,15 +1,17 @@
 import { FormEvent, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { safeNextPath } from '../utils/auth';
 import { useAuth } from '../auth/AuthContext';
 
 export default function Login() {
   const { user, login } = useAuth();
+  const [searchParams] = useSearchParams();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={safeNextPath(searchParams.get('next'))} replace />;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

@@ -9,6 +9,7 @@ import { AppointmentsApi, ScheduleBlocksApi } from '../api/endpoints';
 import type { Appointment } from '../api/types';
 import { useProfessional } from '../hooks/useProfessional';
 import { AppointmentFormModal } from '../components/AppointmentFormModal';
+import { useToast } from '../components/ui/Toast';
 import { AppointmentDetailModal } from '../components/AppointmentDetailModal';
 import { BlockFormModal } from '../components/BlockFormModal';
 
@@ -22,6 +23,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function Agenda() {
   const { professional, loading } = useProfessional();
+  const toast = useToast();
   const calendarRef = useRef<FullCalendar | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -84,7 +86,7 @@ export default function Agenda() {
       refresh();
     } catch {
       arg.revert();
-      alert('Não foi possível remarcar: horário indisponível.');
+      toast.error('Não foi possível remarcar: horário indisponível.');
     }
   }
 

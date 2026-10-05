@@ -14,11 +14,15 @@ import IntakePage from './pages/IntakePage';
 import Services from './pages/Services';
 import Settings from './pages/Settings';
 import Tasks from './pages/Tasks';
+import { ToastProvider } from './components/ui/Toast';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
+          <ConfirmProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/intake/:clientId/:token" element={<IntakePage />} />
@@ -37,6 +41,8 @@ export default function App() {
             </Route>
           </Route>
         </Routes>
+          </ConfirmProvider>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );
