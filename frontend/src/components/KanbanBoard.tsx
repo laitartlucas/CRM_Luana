@@ -1,5 +1,5 @@
-import { ReactNode, useId } from 'react';
-import { DndContext, DragEndEvent, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { ReactNode, useId, useState } from 'react';
+import { DndContext, DragEndEvent, DragStartEvent, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 
 export interface KanbanColumnDef {
   id: string;
@@ -15,9 +15,35 @@ interface KanbanBoardProps<T extends { id: string }> {
   onMove: (itemId: string, toColumnId: string) => void;
 }
 
-function DroppableColumn({ id, label, count, children }: { id: string; label: string; count: number; children: ReactNode }) {
+function DroppableColumn({
+  id,
+  label,
+  count,
+  collapsed,
+  children,
+}: {
+  id: string;
+  label: string;
+  count: number;
+  collapsed: boolean;
+  children: ReactNode;
+}) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const headingId = useId();
+  // Etapa vazia vira uma faixa estreita: o quadro mostra o que tem trabalho sem esconder as etapas.
+  // Ao arrastar um cartão todas se abrem, para soltar com folga.
+  if (collapsed) {
+    return (
+      <section ref={setNodeRef} className={`kanban-column collapsed${isOver ? ' over' : ''}`} aria-labelledby={headingId}>
+        <span className="kanban-column-count" aria-label={`${count} cartões`}>
+          {count}
+        </span>
+        <h2 id={headingId} className="kanban-column-title kanban-rail-title">
+          {label}
+        </h2>
+      </section>
+    );
+  }
   return (
     <section ref={setNodeRef} className={`kanban-column${isOver ? ' over' : ''}`} aria-labelledby={headingId}>
       <div className="kanban-column-header">
@@ -61,7 +87,14 @@ export function KanbanBoard<T extends { id: string }>({ columns, itemsByColumn, 
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   );
 
+  const [dragging, setDragging] = useState(false);
+
+  function handleDragStart(_event: DragStartEvent) {
+    setDragging(true);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setDragging(false);
     const { active, over } = event;
     if (!over) return;
     const toColumnId = String(over.id);
@@ -71,10 +104,16 @@ export function KanbanBoard<T extends { id: string }>({ columns, itemsByColumn, 
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="kanban-board">
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setDragging(false)}>
+      <div className={`kanban-board${dragging ? ' is-dragging' : ''}`}>
         {columns.map((col) => (
-          <DroppableColumn key={col.id} id={col.id} label={col.label} count={itemsByColumn[col.id]?.length ?? 0}>
+          <DroppableColumn
+            key={col.id}
+            id={col.id}
+            label={col.label}
+            count={itemsByColumn[col.id]?.length ?? 0}
+            collapsed={!dragging && (itemsByColumn[col.id]?.length ?? 0) === 0}
+          >
             {(itemsByColumn[col.id] ?? []).map((item) => (
               <DraggableCard key={item.id} id={item.id}>
                 {renderCard(item)}

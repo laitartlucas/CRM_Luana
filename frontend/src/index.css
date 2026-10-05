@@ -455,6 +455,9 @@ input:disabled, select:disabled, textarea:disabled { background: var(--neutral-1
   gap: var(--space-4);
   margin-bottom: var(--space-6);
 }
+.kpi-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .kpi-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .kpi-grid-4 { grid-template-columns: minmax(0, 1fr); } }
 .kpi-tile { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.35rem 1.5rem; }
 .kpi-tile .label { order: -1; font-size: var(--fs-overline); font-weight: 700; letter-spacing: var(--ls-overline); text-transform: uppercase; color: var(--color-text-muted); line-height: 1.35; }
 .kpi-tile .value { font-family: var(--font-display); font-size: var(--fs-kpi); line-height: 1; font-weight: 500; color: var(--color-text); font-variant-numeric: var(--numeric); }
@@ -543,8 +546,10 @@ td.actions .btn-link + .btn-link { margin-left: 1rem; }
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(0, 2fr);
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
 }
+/* Telas largas por natureza (kanban) usam toda a largura do monitor. */
+.app-content:has(.page-wide), .app-content:has(.page-wide) ~ * { max-width: none; }
 
 /* Pares de cards de mesmo peso (ex: dois gráficos) */
 .card-grid-2 {
@@ -605,19 +610,48 @@ td.actions .btn-link + .btn-link { margin-left: 1rem; }
   gap: var(--space-3);
   overflow-x: auto;
   padding-bottom: 0.75rem;
-  scroll-snap-type: x proximity;
+  align-items: flex-start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--neutral-400) transparent;
 }
+.kanban-board::-webkit-scrollbar { height: 8px; }
+.kanban-board::-webkit-scrollbar-thumb { background: var(--neutral-400); border-radius: 4px; }
+.kanban-board::-webkit-scrollbar-track { background: transparent; }
 .kanban-column {
   background: var(--neutral-200);
   border-radius: var(--radius-lg);
-  min-width: 272px;
-  max-width: 272px;
+  flex: 1 1 240px;
+  min-width: 220px;
+  max-width: 340px;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 240px);
-  scroll-snap-align: start;
+  max-height: calc(100vh - 230px);
+  transition: flex-basis 0.15s ease;
 }
 .kanban-column.over { background: var(--caramel-100); outline: 2px dashed var(--caramel-200); outline-offset: -2px; }
+/* Etapa vazia: faixa estreita com o nome na vertical. */
+.kanban-column.collapsed {
+  flex: 0 0 52px;
+  min-width: 52px;
+  max-width: 52px;
+  align-items: center;
+  padding: 0.85rem 0;
+  gap: 0.75rem;
+  background: var(--neutral-50);
+  border: 1px dashed var(--neutral-300);
+}
+.kanban-rail-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: var(--fs-overline) !important;
+  font-weight: 700 !important;
+  letter-spacing: var(--ls-overline) !important;
+  text-transform: uppercase !important;
+  color: var(--color-text-muted) !important;
+  white-space: nowrap;
+}
+.kanban-board.is-dragging .kanban-column { flex-basis: 220px; min-width: 200px; }
 .kanban-column-title { margin: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; }
 .kanban-column-header {
   display: flex;
@@ -677,7 +711,9 @@ td.actions .btn-link + .btn-link { margin-left: 1rem; }
 .score-badge.high { background: var(--caramel-100); color: var(--caramel-700); }
 .score-badge.risk { background: var(--danger-bg); color: var(--danger-fg); }
 @media (max-width: 900px) {
-  .kanban-column { min-width: min(84vw, 300px); max-width: min(84vw, 300px); max-height: none; }
+  .kanban-board { scroll-snap-type: x proximity; }
+  .kanban-column { flex: 0 0 min(84vw, 300px); min-width: 0; max-width: none; max-height: none; scroll-snap-align: start; }
+  .kanban-column.collapsed { flex: 0 0 48px; }
 }
 
 /* ---------- Tarefas ---------- */
