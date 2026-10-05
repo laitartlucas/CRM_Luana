@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClientsApi } from '../api/endpoints';
 import type { Client, SuccessStage } from '../api/types';
+import { useAuth } from '../auth/AuthContext';
 import { ClientFormModal } from '../components/ClientFormModal';
+import { ExportButton } from '../components/ExportButton';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { EmptyState, ErrorState, LoadingState, TableState } from '../components/ui/StateViews';
 import { errorMessage, useToast } from '../components/ui/Toast';
@@ -38,6 +40,9 @@ export default function Clients() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Planilha com dados pessoais: só ADMIN/MANAGER (o backend também recusa os demais).
+  const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const list = usePagedList<Client>(LIST_CONFIG, (q) =>
     ClientsApi.list({
@@ -74,9 +79,19 @@ export default function Clients() {
     <div>
       <div className="toolbar">
         <h1 style={{ margin: 0 }}>Clientes</h1>
-        <button className="btn" onClick={() => setCreating(true)}>
-          + Nova cliente
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {canExport && (
+            <ExportButton
+              label="Exportar CSV"
+              path="/reports/clients.csv"
+              params={{ search: list.params.search.trim(), successStage: list.params.filters.successStage }}
+              fallbackName="clientes.csv"
+            />
+          )}
+          <button className="btn" onClick={() => setCreating(true)}>
+            + Nova cliente
+          </button>
+        </div>
       </div>
 
       <div className="card">

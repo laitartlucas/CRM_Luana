@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { LeadsApi } from '../api/endpoints';
 import type { Client, LeadSource } from '../api/types';
 import { LEAD_SOURCE_LABELS } from '../constants/pipelineLabels';
+import { useAuth } from '../auth/AuthContext';
+import { ExportButton } from '../components/ExportButton';
 import { LeadFormModal } from '../components/LeadFormModal';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { EmptyState, ErrorState, LoadingState, TableState } from '../components/ui/StateViews';
@@ -34,6 +36,9 @@ export default function Leads() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  // Planilha com dados pessoais: só ADMIN/MANAGER (o backend também recusa os demais).
+  const canExport = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
   const list = usePagedList<Client>(LIST_CONFIG, (q) =>
     LeadsApi.list({
@@ -71,9 +76,19 @@ export default function Leads() {
     <div>
       <div className="toolbar">
         <h1 style={{ margin: 0 }}>Leads</h1>
-        <button className="btn" onClick={() => setCreating(true)}>
-          + Nova lead
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {canExport && (
+            <ExportButton
+              label="Exportar CSV"
+              path="/reports/leads.csv"
+              params={{ search: list.params.search.trim(), source: list.params.filters.source, stage: list.params.filters.stage }}
+              fallbackName="leads.csv"
+            />
+          )}
+          <button className="btn" onClick={() => setCreating(true)}>
+            + Nova lead
+          </button>
+        </div>
       </div>
 
       <div className="card">

@@ -26,6 +26,8 @@ async function bootstrap() {
   app.enableCors({
     origin: config.get<string>('WEB_APP_URL'),
     credentials: true,
+    // O navegador só deixa o front ler este cabeçalho (aviso de exportação cortada) se for exposto.
+    exposedHeaders: ['X-Export-Truncated'],
   });
 
   const port = config.get<number>('PORT', 3000);

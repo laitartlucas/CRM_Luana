@@ -1,5 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Query, UseGuards } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { PeriodQueryDto } from '../common/dto/period-query.dto';
+import { resolvePeriod } from '../common/utils/period';
 import { Audit } from '../common/decorators/audit.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { PipelineService } from './pipeline.service';
@@ -16,19 +20,26 @@ export class PipelineController {
     return this.pipelineService.board();
   }
 
+  // Relatórios de funil e receita: só ADMIN/MANAGER (o RolesGuard global aplica).
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Get('funnel-report')
-  funnelReport(@Query('from') from?: string, @Query('to') to?: string) {
-    return this.pipelineService.funnelReport(from ? new Date(from) : undefined, to ? new Date(to) : undefined);
+  funnelReport(@Query() query: PeriodQueryDto, @CurrentUser() user: AuthenticatedUser) {
+    const { from, to } = resolvePeriod(query, user.timezone);
+    return this.pipelineService.funnelReport(from, to);
   }
 
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Get('origin-report')
-  originReport() {
-    return this.pipelineService.originReport();
+  originReport(@Query() query: PeriodQueryDto, @CurrentUser() user: AuthenticatedUser) {
+    const { from, to } = resolvePeriod(query, user.timezone);
+    return this.pipelineService.originReport(from, to);
   }
 
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Get('metrics')
-  metrics() {
-    return this.pipelineService.metrics();
+  metrics(@Query() query: PeriodQueryDto, @CurrentUser() user: AuthenticatedUser) {
+    const { from, to } = resolvePeriod(query, user.timezone);
+    return this.pipelineService.metrics(from, to);
   }
 
   @Audit('client')

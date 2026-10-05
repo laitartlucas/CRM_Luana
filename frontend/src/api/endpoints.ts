@@ -85,8 +85,8 @@ export const PipelineApi = {
     data: { nextActionNote?: string; nextActionAt?: string; proposalValue?: number; paymentMethod?: string },
   ) => api.patch<Client>(`/pipeline/${id}`, data),
   funnelReport: (params: { from?: string; to?: string } = {}) => api.get<FunnelReport>('/pipeline/funnel-report', { params }),
-  originReport: () => api.get<OriginReportEntry[]>('/pipeline/origin-report'),
-  metrics: () => api.get<PipelineMetrics>('/pipeline/metrics'),
+  originReport: (params: { from?: string; to?: string } = {}) => api.get<OriginReportEntry[]>('/pipeline/origin-report', { params }),
+  metrics: (params: { from?: string; to?: string } = {}) => api.get<PipelineMetrics>('/pipeline/metrics', { params }),
 };
 
 export const ClientSuccessApi = {
@@ -161,6 +161,8 @@ export const DashboardApi = {
   today: (professionalId?: string) => api.get<Appointment[]>('/dashboard/today', { params: { professionalId } }),
   kpis: (params: { professionalId?: string; from?: string; to?: string }) =>
     api.get<DashboardKpis>('/dashboard/kpis', { params }),
+  appointmentsByDay: (params: { professionalId?: string; from?: string; to?: string }) =>
+    api.get<Array<{ date: string; count: number }>>('/dashboard/appointments-by-day', { params }),
 };
 
 export const CalendarSyncApi = {

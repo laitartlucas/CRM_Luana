@@ -186,9 +186,13 @@ export class PipelineService {
     return { mainPath: withConversion, sideStages };
   }
 
-  async originReport() {
+  /** Leads por origem. Com período, conta as leads CADASTRADAS nele (e quantas dessas já fecharam). */
+  async originReport(from?: Date, to?: Date) {
     const clients = await this.prisma.client.findMany({
-      where: { leadSource: { not: null } },
+      where: {
+        leadSource: { not: null },
+        ...(from && to ? { createdAt: { gte: from, lte: to } } : {}),
+      },
       select: { leadSource: true, leadSourceContentRef: true, funnelStage: true, pipelineStage: true },
     });
 
@@ -213,9 +217,17 @@ export class PipelineService {
       .sort((a, b) => b.leads - a.leads);
   }
 
-  async metrics() {
+  /**
+   * Métricas do Pipeline. Com período: tempo médio por etapa considera as etapas concluídas nele,
+   * e ticket médio / fechamentos contam quem fechou nele. A forma de pagamento mais usada é sempre
+   * de todos os clientes (vem da ficha da cliente, que não tem data de fechamento própria).
+   */
+  async metrics(from?: Date, to?: Date) {
     const events = await this.prisma.funnelStageEvent.findMany({
-      where: { module: 'PIPELINE', exitedAt: { not: null } },
+      where: {
+        module: 'PIPELINE',
+        exitedAt: from && to ? { gte: from, lte: to } : { not: null },
+      },
       select: { toStage: true, enteredAt: true, exitedAt: true },
     });
 
@@ -231,7 +243,10 @@ export class PipelineService {
     }));
 
     const closedWon = await this.prisma.client.findMany({
-      where: { pipelineStage: PipelineStage.CLOSED_WON },
+      where: {
+        pipelineStage: PipelineStage.CLOSED_WON,
+        ...(from && to ? { pipelineStageEnteredAt: { gte: from, lte: to } } : {}),
+      },
       select: { proposalValue: true },
     });
     const values = closedWon.map((c) => Number(c.proposalValue ?? 0)).filter((v) => v > 0);

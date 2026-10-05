@@ -64,13 +64,7 @@ export class LeadsService {
     const sort = query.sort ?? 'leadScore';
     const direction = query.order ?? (sort === 'name' ? 'asc' : 'desc');
 
-    const where: Prisma.ClientWhereInput = {
-      AND: [
-        { funnelStage: query.stage ? FunnelStage[query.stage] : { in: [FunnelStage.LEAD, FunnelStage.PIPELINE] } },
-        query.source ? { leadSource: query.source } : {},
-        personSearchFilter(query.search) ?? {},
-      ],
-    };
+    const where = this.buildWhere(query);
 
     if (sort === 'leadScore') {
       return this.listByScore(where, direction, { page, pageSize, skip, take });
@@ -84,6 +78,53 @@ export class LeadsService {
     const entered = await this.firstPipelineEntries({ clientId: { in: clients.map((c) => c.id) } });
     const items = clients.map((client) => ({ ...client, leadScore: this.computeLeadScore(client, entered.get(client.id)) }));
     return toPage(items, total, page, pageSize);
+  }
+
+  /** Filtro de leads compartilhado pela listagem e pela exportação (período = data de cadastro). */
+  private buildWhere(
+    query: Pick<ListLeadsQueryDto, 'stage' | 'source' | 'search'>,
+    period: { from?: Date; to?: Date } = {},
+  ): Prisma.ClientWhereInput {
+    return {
+      AND: [
+        { funnelStage: query.stage ? FunnelStage[query.stage] : { in: [FunnelStage.LEAD, FunnelStage.PIPELINE] } },
+        query.source ? { leadSource: query.source } : {},
+        personSearchFilter(query.search) ?? {},
+        period.from && period.to ? { createdAt: { gte: period.from, lte: period.to } } : {},
+      ],
+    };
+  }
+
+  /**
+   * Todas as leads que batem com o filtro (até `cap`), mais recentes primeiro, já com o score —
+   * para exportação. `total` diz quantas existem, para avisar quando o limite cortou o resultado.
+   */
+  async listForExport(
+    query: Pick<ListLeadsQueryDto, 'stage' | 'source' | 'search'>,
+    period: { from?: Date; to?: Date },
+    cap: number,
+  ) {
+    const where = this.buildWhere(query, period);
+    const [total, rows, entered] = await Promise.all([
+      this.prisma.client.count({ where }),
+      this.prisma.client.findMany({
+        where,
+        select: {
+          ...SCORE_FIELDS,
+          name: true,
+          phoneE164: true,
+          instagram: true,
+          email: true,
+          city: true,
+          profession: true,
+          funnelStage: true,
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+        take: cap,
+      }),
+      this.firstPipelineEntries({ client: where }),
+    ]);
+    return { total, rows: rows.map((row) => ({ ...row, leadScore: this.computeLeadScore(row, entered.get(row.id)) })) };
   }
 
   private async listByScore(

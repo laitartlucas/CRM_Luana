@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AppointmentStatus } from '@prisma/client';
-import { fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { PrismaService } from '../prisma/prisma.service';
 import { BUSINESS_HOURS } from '../appointments/business-hours.const';
 
@@ -34,6 +34,43 @@ export class DashboardService {
       include: { client: true, service: true, professional: { select: { id: true, name: true } } },
       orderBy: { startAt: 'asc' },
     });
+  }
+
+  /**
+   * Contagem de agendamentos por dia local. Sem período, usa os últimos 7 dias (incluindo hoje).
+   * Os dias sem agendamento entram com 0 para o gráfico não "pular" datas.
+   */
+  async getAppointmentsByDay(params: { professionalId?: string; from?: Date; to?: Date }) {
+    const { professionalId } = params;
+    const tz = await this.resolveTimezone(professionalId);
+
+    let { from, to } = params;
+    if (!from || !to) {
+      const today = formatInTimeZone(new Date(), tz, 'yyyy-MM-dd');
+      const start = new Date(`${today}T00:00:00.000Z`);
+      start.setUTCDate(start.getUTCDate() - 6);
+      from = fromZonedTime(`${start.toISOString().slice(0, 10)}T00:00:00.000`, tz);
+      to = fromZonedTime(`${today}T23:59:59.999`, tz);
+    }
+
+    const appointments = await this.prisma.appointment.findMany({
+      where: { professionalId, startAt: { gte: from, lte: to }, status: { not: AppointmentStatus.CANCELLED } },
+      select: { startAt: true },
+    });
+
+    const counts = new Map<string, number>();
+    // Percorre os dias pelo calendário (UTC) para não depender de horário de verão do servidor.
+    const cursor = new Date(`${formatInTimeZone(from, tz, 'yyyy-MM-dd')}T00:00:00.000Z`);
+    const lastDay = formatInTimeZone(to, tz, 'yyyy-MM-dd');
+    while (cursor.toISOString().slice(0, 10) <= lastDay) {
+      counts.set(cursor.toISOString().slice(0, 10), 0);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+    for (const { startAt } of appointments) {
+      const day = formatInTimeZone(startAt, tz, 'yyyy-MM-dd');
+      if (counts.has(day)) counts.set(day, (counts.get(day) ?? 0) + 1);
+    }
+    return Array.from(counts, ([date, count]) => ({ date, count }));
   }
 
   async getKpis(params: { professionalId?: string; from?: Date; to?: Date }) {

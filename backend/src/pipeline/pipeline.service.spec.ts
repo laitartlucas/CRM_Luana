@@ -129,3 +129,44 @@ describe('PipelineService.metrics', () => {
     expect(metrics.avgTimePerStageHours).toEqual([]);
   });
 });
+
+describe('PipelineService — período nos relatórios', () => {
+  const from = new Date('2026-10-01T03:00:00Z');
+  const to = new Date('2026-11-01T02:59:59Z');
+
+  it('origem: sem período considera todas as leads; com período, só as cadastradas nele', async () => {
+    const all = makeService();
+    await all.service.originReport();
+    expect(all.prisma.client.findMany.mock.calls[0][0].where).toEqual({ leadSource: { not: null } });
+
+    const ranged = makeService();
+    await ranged.service.originReport(from, to);
+    expect(ranged.prisma.client.findMany.mock.calls[0][0].where).toEqual({
+      leadSource: { not: null },
+      createdAt: { gte: from, lte: to },
+    });
+  });
+
+  it('métricas: com período, etapas concluídas e fechamentos são limitados a ele', async () => {
+    const { service, prisma } = makeService();
+    await service.metrics(from, to);
+    expect(prisma.funnelStageEvent.findMany.mock.calls[0][0].where.exitedAt).toEqual({ gte: from, lte: to });
+    const closedWhere = prisma.client.findMany.mock.calls[0][0].where;
+    expect(closedWhere.pipelineStage).toBe('CLOSED_WON');
+    expect(closedWhere.pipelineStageEnteredAt).toEqual({ gte: from, lte: to });
+  });
+
+  it('métricas: sem período mantém o comportamento de sempre (tudo, etapas já concluídas)', async () => {
+    const { service, prisma } = makeService();
+    await service.metrics();
+    expect(prisma.funnelStageEvent.findMany.mock.calls[0][0].where.exitedAt).toEqual({ not: null });
+    expect(prisma.client.findMany.mock.calls[0][0].where.pipelineStageEnteredAt).toBeUndefined();
+  });
+
+  it('forma de pagamento mais usada não depende do período', async () => {
+    const { service, prisma } = makeService();
+    await service.metrics(from, to);
+    const paymentWhere = prisma.client.findMany.mock.calls[1][0].where;
+    expect(paymentWhere).toEqual({ funnelStage: 'CLIENT', paymentMethod: { not: null } });
+  });
+});
