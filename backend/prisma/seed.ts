@@ -6,31 +6,39 @@ const prisma = new PrismaClient();
 async function main() {
   // Login é por usuário (campo "name", ver auth.service.ts) — o e-mail aqui
   // só existe pra satisfazer a coluna obrigatória/única do schema.
-  const luanaHash = await bcrypt.hash('laitart@1997', 12);
+  // Senhas vêm do ambiente (nunca no código). Usuários já existentes não têm
+  // a senha sobrescrita, então rodar o seed em produção é seguro.
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPassword || adminPassword.length < 8) {
+    throw new Error('Defina SEED_ADMIN_PASSWORD (mínimo 8 caracteres) para criar o usuário admin.');
+  }
   const admin = await prisma.user.upsert({
     where: { email: 'luana@luanalaitart.com' },
-    update: { name: 'Luana', passwordHash: luanaHash },
+    update: { name: 'Luana' },
     create: {
       name: 'Luana',
       email: 'luana@luanalaitart.com',
-      passwordHash: luanaHash,
+      passwordHash: await bcrypt.hash(adminPassword, 12),
       role: Role.ADMIN,
       timezone: 'America/Sao_Paulo',
     },
   });
 
-  const testeHash = await bcrypt.hash('514263', 12);
-  await prisma.user.upsert({
-    where: { email: 'teste@luanalaitart.com' },
-    update: { name: 'Teste', passwordHash: testeHash },
-    create: {
-      name: 'Teste',
-      email: 'teste@luanalaitart.com',
-      passwordHash: testeHash,
-      role: Role.ADMIN,
-      timezone: 'America/Sao_Paulo',
-    },
-  });
+  // Usuário de testes opcional: só é criado se SEED_TEST_PASSWORD estiver definida.
+  const testPassword = process.env.SEED_TEST_PASSWORD;
+  if (testPassword) {
+    await prisma.user.upsert({
+      where: { email: 'teste@luanalaitart.com' },
+      update: { name: 'Teste' },
+      create: {
+        name: 'Teste',
+        email: 'teste@luanalaitart.com',
+        passwordHash: await bcrypt.hash(testPassword, 12),
+        role: Role.ADMIN,
+        timezone: 'America/Sao_Paulo',
+      },
+    });
+  }
 
   const services = [
     { name: 'Consultoria de Estilo Individual', durationMinutes: 90, price: 450 },

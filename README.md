@@ -50,7 +50,7 @@ lugar a olhar).
    exemplo):
    ```
    docker-compose exec backend npx prisma migrate dev --name init
-   docker-compose exec backend npm run seed
+   docker-compose exec -e SEED_ADMIN_PASSWORD='<defina-uma-senha-forte>' backend npm run seed
    ```
    Depois da migração inicial, aplique a constraint de não-sobreposição de
    horários (não expressável no `schema.prisma`, ver
@@ -60,9 +60,10 @@ lugar a olhar).
    ```
 
 4. Acesse `http://localhost:5173` e entre com:
-   - **e-mail**: `consultora@example.com`
-   - **senha**: `trocar123`
-   (troque a senha assim que possível — é só o valor do seed).
+   - **usuário**: `Luana`
+   - **senha**: a definida em `SEED_ADMIN_PASSWORD` ao rodar o seed
+   (o login é pelo nome do usuário, não por e-mail; opcionalmente defina
+   `SEED_TEST_PASSWORD` para criar também o usuário `Teste`).
 
 ## Rodando sem Docker (Postgres/Redis locais)
 
