@@ -36,16 +36,18 @@ export default function Login() {
   return (
     <div className="login-shell">
       <aside className="login-brand-panel" aria-label="Luana Laitart">
-        <div className="login-brand-eyebrow">LUANA LAITART</div>
-        <div className="login-brand-center">
-          <img src="/logo.png" alt="Luana Laitart" />
-          <div>
-            <div className="login-brand-title">
-              Consultoria de imagem
-              <br />
-              &amp; estilo pessoal
-            </div>
-            <div className="login-brand-subtitle">Elegância que começa na organização.</div>
+        <div className="login-brand-top">
+          <span className="login-brand-eyebrow">LUANA LAITART</span>
+          <img src="/logo.png" alt="" />
+        </div>
+        <div className="login-brand-body">
+          <figure className="login-photo">
+            <img src="/luana.jpg" alt="Luana Laitart, consultora de imagem" />
+          </figure>
+          <div className="login-brand-text">
+            <p className="login-brand-title">Consultoria de imagem &amp; estilo pessoal</p>
+            <span className="login-brand-rule" aria-hidden="true" />
+            <p className="login-brand-subtitle">Elegância que começa na organização.</p>
           </div>
         </div>
         <div className="login-brand-footer">
@@ -80,12 +82,16 @@ export default function Login() {
             />
           </label>
           {error && (
-            <span className="error-text" role="alert">
-              {error}
-            </span>
+            <div className="alert danger" role="alert">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v6M12 16.5v.5" />
+              </svg>
+              <strong>{error}</strong>
+            </div>
           )}
-          <button className="btn" type="submit" disabled={loading} style={{ height: 52 }}>
-            {loading ? 'ENTRANDO...' : 'ENTRAR'}
+          <button className="btn login-submit" type="submit" disabled={loading}>
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
       </main>

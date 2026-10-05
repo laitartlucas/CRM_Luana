@@ -7,14 +7,22 @@ import { CommandPalette } from './CommandPalette';
 import { NotificationBell } from './NotificationBell';
 import { LoadingState } from './ui/StateViews';
 
+// Ícones de traço (24×24). Configurações fica no fim da lista: no computador vai para o rodapé do menu,
+// no celular entra na faixa de navegação rolável.
 const NAV_ITEMS = [
-  { to: '/', label: 'Painel', end: true },
-  { to: '/leads', label: 'Leads' },
-  { to: '/pipeline', label: 'Pipeline' },
-  { to: '/tarefas', label: 'Tarefas', badgeKey: 'tasks' },
-  { to: '/agenda', label: 'Agenda' },
-  { to: '/clientes', label: 'Clientes' },
-  { to: '/servicos', label: 'Serviços' },
+  { to: '/', label: 'Painel', end: true, icon: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z' },
+  { to: '/leads', label: 'Leads', icon: 'M9 4a4 4 0 1 1 0 8a4 4 0 1 1 0-8zM2 21c0-4 3-6 7-6s7 2 7 6M17 11h5M19.5 8.5v5' },
+  { to: '/pipeline', label: 'Pipeline', icon: 'M3 4h5v16H3zM10 4h5v11h-5zM17 4h4v7h-4z' },
+  { to: '/tarefas', label: 'Tarefas', badgeKey: 'tasks', icon: 'M4 6l2 2 3-3M4 13l2 2 3-3M12 7h8M12 14h8M12 20h8' },
+  { to: '/agenda', label: 'Agenda', icon: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4' },
+  { to: '/clientes', label: 'Clientes', icon: 'M12 3l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z' },
+  { to: '/servicos', label: 'Serviços', icon: 'M12 3l3 4H9zM6 9h12l-1 12H7z' },
+  {
+    to: '/configuracoes',
+    label: 'Configurações',
+    className: 'nav-settings',
+    icon: 'M12 9a3 3 0 1 1 0 6a3 3 0 1 1 0-6zM12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
+  },
 ];
 
 function initials(name?: string) {
@@ -54,7 +62,6 @@ export function Layout() {
   const { user, logout } = useAuth();
   const tasksAttention = useTasksAttention();
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const contentRef = useRef<HTMLElement>(null);
@@ -69,20 +76,6 @@ export function Layout() {
     }
     contentRef.current?.focus({ preventScroll: true });
   }, [location.pathname]);
-
-  // Menu em gaveta (celular): fecha ao navegar, com Esc, e trava a rolagem da página enquanto aberto.
-  useEffect(() => setMenuOpen(false), [location.pathname]);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [menuOpen]);
 
   async function handleLogout() {
     await logout().catch(() => undefined);
@@ -117,64 +110,48 @@ export function Layout() {
       >
         Pular para o conteúdo
       </a>
-      <aside className={`sidebar${menuOpen ? ' open' : ''}`} id="main-menu" aria-label="Menu principal">
-        <div className="sidebar-brand">
-          <img src="/logo.png" alt="Luana Laitart" />
+      <aside className="sidebar" aria-label="Menu principal">
+        <NavLink to="/" className="sidebar-brand" aria-label="Luana Laitart Studio, ir para o Painel">
+          <img src="/logo.png" alt="" />
           <div>
             <div className="sidebar-brand-name">Luana Laitart</div>
             <div className="sidebar-brand-tag">STUDIO</div>
           </div>
-        </div>
-        <nav className="sidebar-nav">
+        </NavLink>
+        <nav className="sidebar-nav" aria-label="Seções">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
-              className={({ isActive }) => (isActive ? 'sidebar-link active' : 'sidebar-link')}
+              className={({ isActive }) => ['sidebar-link', item.className, isActive ? 'active' : ''].filter(Boolean).join(' ')}
             >
-              {({ isActive }) => (
-                <>
-                  <span className="dot" aria-hidden="true">{isActive ? '◈' : '◇'}</span> {item.label}
-                  {item.badgeKey === 'tasks' && tasksAttention > 0 && (
-                    <span className="nav-badge" aria-label={`${tasksAttention} tarefa(s) para hoje ou atrasada(s)`}>
-                      {tasksAttention}
-                    </span>
-                  )}
-                </>
+              <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d={item.icon} />
+              </svg>
+              {item.label}
+              {item.badgeKey === 'tasks' && tasksAttention > 0 && (
+                <span className="nav-badge" aria-label={`${tasksAttention} tarefa(s) para hoje ou atrasada(s)`}>
+                  {tasksAttention}
+                </span>
               )}
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-footer">
-          <NavLink to="/configuracoes" className={({ isActive }) => (isActive ? 'sidebar-footer-link active' : 'sidebar-footer-link')}>
-            <span className="dot" aria-hidden="true">◇</span> Configurações
-          </NavLink>
           <div className="sidebar-user">
-            <div className="sidebar-user-avatar">{initials(user?.name ?? user?.email)}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="sidebar-user-avatar" aria-hidden="true">{initials(user?.name ?? user?.email)}</div>
+            <div className="sidebar-user-text">
               <div className="sidebar-user-name">{user?.name ?? user?.email}</div>
-              <button className="btn-link" style={{ fontSize: '0.72rem', color: 'var(--sidebar-muted)' }} onClick={handleLogout}>
+              <button className="sidebar-logout" onClick={handleLogout}>
                 Sair
               </button>
             </div>
           </div>
         </div>
       </aside>
-      {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} aria-hidden="true" />}
       <div className="app-main">
         <header className="topbar">
-          <button
-            className="menu-button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
-            aria-expanded={menuOpen}
-            aria-controls="main-menu"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
           <button className="search-trigger" onClick={() => setPaletteOpen(true)} aria-keyshortcuts="Control+K">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />

@@ -47,7 +47,7 @@ export function TaskRow({ task, busy, showClient = true, onToggle, onEdit, onDel
         <button className="btn-link" onClick={() => onEdit(task)}>
           Editar
         </button>
-        <button className="btn-link" style={{ color: 'var(--color-danger)' }} onClick={() => onDelete(task)}>
+        <button className="btn-link destructive" onClick={() => onDelete(task)}>
           Excluir
         </button>
       </div>

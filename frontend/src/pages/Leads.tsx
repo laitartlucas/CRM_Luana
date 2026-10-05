@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState, TableState } from '../components/
 import { errorMessage, useToast } from '../components/ui/Toast';
 import { Pagination } from '../components/Pagination';
 import { SendMessageModal } from '../components/SendMessageModal';
+import { ScoreMeter } from '../components/ui/ScoreMeter';
 import { usePagedList } from '../hooks/usePagedList';
 import type { ListConfig } from '../utils/listParams';
 
@@ -75,8 +76,8 @@ export default function Leads() {
   return (
     <div>
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>Leads</h1>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <h1>Leads</h1>
+        <div className="toolbar-actions">
           {canExport && (
             <ExportButton
               label="Exportar CSV"
@@ -99,7 +100,7 @@ export default function Leads() {
             value={list.searchInput}
             onChange={(e) => list.setSearchInput(e.target.value)}
           />
-          <select aria-label="Filtrar por origem" value={list.params.filters.source} onChange={(e) => list.setFilter('source', e.target.value)}>
+          <select aria-label="Filtrar por origem" className={list.params.filters.source ? 'is-active' : undefined} value={list.params.filters.source} onChange={(e) => list.setFilter('source', e.target.value)}>
             <option value="">Todas as origens</option>
             {(Object.keys(LEAD_SOURCE_LABELS) as LeadSource[]).map((s) => (
               <option key={s} value={s}>
@@ -107,7 +108,7 @@ export default function Leads() {
               </option>
             ))}
           </select>
-          <select aria-label="Filtrar por situação" value={list.params.filters.stage} onChange={(e) => list.setFilter('stage', e.target.value)}>
+          <select aria-label="Filtrar por situação" className={list.params.filters.stage ? 'is-active' : undefined} value={list.params.filters.stage} onChange={(e) => list.setFilter('stage', e.target.value)}>
             <option value="">Todas as situações</option>
             {STAGE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -132,7 +133,7 @@ export default function Leads() {
         {list.error && <ErrorState message="Não foi possível carregar as leads." onRetry={list.reload} />}
 
         <div className="table-scroll" style={{ opacity: list.loading && list.data ? 0.6 : 1 }} aria-busy={list.loading}>
-          <table>
+          <table className="rtable">
             <thead>
               <tr>
                 <th>Nome</th>
@@ -140,26 +141,33 @@ export default function Leads() {
                 <th>Origem</th>
                 <th>Score</th>
                 <th>Situação</th>
-                <th style={{ textAlign: 'right' }}>Ações</th>
+                <th className="actions">Ações</th>
               </tr>
             </thead>
             <tbody>
               {leads.map((l) => (
                 <tr key={l.id}>
-                  <td>
+                  <td className="cell-primary">
                     <Link to={`/leads/${l.id}`}>{l.name || '(sem nome)'}</Link>
                   </td>
-                  <td>{l.phoneE164}</td>
-                  <td>{l.leadSource ? LEAD_SOURCE_LABELS[l.leadSource] : '—'}</td>
-                  <td>{l.leadScore ?? 0}</td>
-                  <td>{l.funnelStage === 'PIPELINE' ? 'No Pipeline' : 'Lead nova'}</td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td data-label="WhatsApp" className="num">{l.phoneE164 || '—'}</td>
+                  <td data-label="Origem">{l.leadSource ? LEAD_SOURCE_LABELS[l.leadSource] : '—'}</td>
+                  <td data-label="Score">
+                    <ScoreMeter value={l.leadScore ?? 0} />
+                  </td>
+                  <td data-label="Situação">
+                    {l.funnelStage === 'PIPELINE' ? (
+                      <span className="badge tone-brand">No pipeline</span>
+                    ) : (
+                      <span className="badge tone-info">Lead nova</span>
+                    )}
+                  </td>
+                  <td className="actions">
                     <button className="btn-link" onClick={() => setMessagingLead(l)}>
                       Mensagem
-                    </button>{' '}
+                    </button>
                     <button
-                      className="btn-link"
-                      style={{ color: 'var(--color-danger)', marginLeft: '0.75rem' }}
+                      className="btn-link destructive"
                       disabled={deletingId === l.id}
                       onClick={() => handleDelete(l)}
                     >

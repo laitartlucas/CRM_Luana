@@ -11,6 +11,18 @@ import { errorMessage, useToast } from '../components/ui/Toast';
 import { Pagination } from '../components/Pagination';
 import { SendMessageModal } from '../components/SendMessageModal';
 import { usePagedList } from '../hooks/usePagedList';
+
+/** Risco de falta em selo: baixo (sucesso), médio (alerta), alto (erro). */
+function NoShowBadge({ score }: { score: number }) {
+  const pct = Math.round((score ?? 0) * 100);
+  const tone = pct >= 50 ? 'tone-danger' : pct >= 25 ? 'tone-warning' : 'tone-success';
+  const label = pct >= 50 ? 'Alto' : pct >= 25 ? 'Médio' : 'Baixo';
+  return (
+    <span className={`badge ${tone}`}>
+      {label} · {pct}%
+    </span>
+  );
+}
 import type { ListConfig } from '../utils/listParams';
 
 // Definido fora do componente: o hook compara a configuração por identidade.
@@ -78,8 +90,8 @@ export default function Clients() {
   return (
     <div>
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>Clientes</h1>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <h1>Clientes</h1>
+        <div className="toolbar-actions">
           {canExport && (
             <ExportButton
               label="Exportar CSV"
@@ -105,6 +117,7 @@ export default function Clients() {
           <select
             aria-label="Filtrar por etapa"
             value={list.params.filters.successStage}
+            className={list.params.filters.successStage ? 'is-active' : undefined}
             onChange={(e) => list.setFilter('successStage', e.target.value)}
           >
             <option value="">Todas as etapas</option>
@@ -131,32 +144,33 @@ export default function Clients() {
         {list.error && <ErrorState message="Não foi possível carregar as clientes." onRetry={list.reload} />}
 
         <div className="table-scroll" style={{ opacity: list.loading && list.data ? 0.6 : 1 }} aria-busy={list.loading}>
-          <table>
+          <table className="rtable">
             <thead>
               <tr>
                 <th>Nome</th>
                 <th>WhatsApp</th>
                 <th>Estilo predominante</th>
-                <th>Score no-show</th>
-                <th style={{ textAlign: 'right' }}>Ações</th>
+                <th>Risco de no-show</th>
+                <th className="actions">Ações</th>
               </tr>
             </thead>
             <tbody>
               {clients.map((c) => (
                 <tr key={c.id}>
-                  <td>
+                  <td className="cell-primary">
                     <Link to={`/clientes/${c.id}`}>{c.name || '(sem nome)'}</Link>
                   </td>
-                  <td>{c.phoneE164}</td>
-                  <td>{c.predominantStyle ?? '—'}</td>
-                  <td>{Math.round(c.noShowScore * 100)}%</td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <td data-label="WhatsApp" className="num">{c.phoneE164 || '—'}</td>
+                  <td data-label="Estilo">{c.predominantStyle ?? '—'}</td>
+                  <td data-label="Risco de no-show">
+                    <NoShowBadge score={c.noShowScore} />
+                  </td>
+                  <td className="actions">
                     <button className="btn-link" onClick={() => setMessagingClient(c)}>
                       Mensagem
-                    </button>{' '}
+                    </button>
                     <button
-                      className="btn-link"
-                      style={{ color: 'var(--color-danger)', marginLeft: '0.75rem' }}
+                      className="btn-link destructive"
                       disabled={deletingId === c.id}
                       onClick={() => handleDelete(c)}
                     >

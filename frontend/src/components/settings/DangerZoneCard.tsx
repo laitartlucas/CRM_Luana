@@ -34,13 +34,13 @@ export function DangerZoneCard() {
   }
 
   return (
-    <div className="card" style={{ marginTop: '1.25rem', borderColor: 'var(--color-danger)' }}>
-      <h2 className="section-title" style={{ marginTop: 0, color: 'var(--color-danger)' }}>Zona de risco</h2>
+    <div className="card danger-zone">
+      <h2 className="section-title">Zona de risco</h2>
       <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
         Apaga permanentemente TODAS as clientes e leads cadastradas, junto com agendamentos, conversas e mensagens ligados a
         elas. Não existe "desfazer". Para confirmar, digite <strong>{WIPE_CONFIRMATION_PHRASE}</strong> abaixo.
       </p>
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="actions-row">
         <input
           aria-label="Frase de confirmação"
           value={phrase}

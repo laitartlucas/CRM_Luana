@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal } from './Modal';
 import { AppointmentsApi } from '../api/endpoints';
 import type { Appointment } from '../api/types';
+import { AppointmentStatusBadge } from './ui/StatusBadge';
 
 export function AppointmentDetailModal({
   appointment,
@@ -40,7 +41,7 @@ export function AppointmentDetailModal({
         {start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
       </div>
       <div>
-        <span className={`badge ${appointment.status}`}>{appointment.status}</span>{' '}
+        <AppointmentStatusBadge status={appointment.status} />{' '}
         {appointment.location === 'ONLINE' ? '· Online' : '· Presencial'}
       </div>
       {appointment.notes && <div style={{ color: 'var(--color-text-muted)' }}>{appointment.notes}</div>}

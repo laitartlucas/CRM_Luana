@@ -21,9 +21,14 @@ export default function Settings() {
     <div>
       <h1>Configurações</h1>
 
+      <div className="settings-stack">
       {params.get('googleCalendar') === 'connected' && (
-        <div className="card" role="status" style={{ borderColor: 'var(--color-success)', marginBottom: '1rem' }}>
-          Google Calendar conectado com sucesso!
+        <div className="alert success" role="status">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12.5l2.5 2.5L16 9.5" />
+          </svg>
+          <strong>Google Agenda conectado com sucesso.</strong>
         </div>
       )}
 
@@ -33,6 +38,7 @@ export default function Settings() {
       <MessageTemplatesSection />
       {isAdmin && <WhatsappSimulatorCard />}
       {isAdmin && <DangerZoneCard />}
+      </div>
     </div>
   );
 }
