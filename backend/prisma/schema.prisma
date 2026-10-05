@@ -187,6 +187,7 @@ model User {
   funnelStageEvents   FunnelStageEvent[]
   tasksAssigned       Task[]             @relation("TaskAssignee")
   tasksCreated        Task[]             @relation("TaskCreator")
+  notifications       UserNotification[]
 
   @@map("users")
 }
@@ -502,4 +503,35 @@ model Task {
   @@index([assigneeId, status])
   @@index([clientId])
   @@map("tasks")
+}
+
+// -----------------------------------------------------------------------
+// Central de notificações (in-app)
+// -----------------------------------------------------------------------
+
+enum NotificationType {
+  TASK_DUE
+  HUMAN_HANDOFF
+  NEW_LEAD
+  APPOINTMENT_BOOKED
+  APPOINTMENT_CANCELLED
+}
+
+model UserNotification {
+  id     String           @id @default(uuid())
+  userId String
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type   NotificationType
+  title  String
+  body   String?
+  // Rota interna do app (ex.: /tarefas, /leads/<id>).
+  link   String?
+  // Evita avisar duas vezes o mesmo fato para a mesma pessoa.
+  dedupeKey String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt, createdAt])
+  @@map("user_notifications")
 }

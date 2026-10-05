@@ -277,3 +277,29 @@ export interface TaskSummary {
   nodate: number;
   attention: number;
 }
+
+export interface SearchHit {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  href: string;
+}
+
+export interface SearchResults {
+  leads: SearchHit[];
+  clients: SearchHit[];
+  appointments: SearchHit[];
+  tasks: SearchHit[];
+}
+
+export type NotificationType = 'TASK_DUE' | 'HUMAN_HANDOFF' | 'NEW_LEAD' | 'APPOINTMENT_BOOKED' | 'APPOINTMENT_CANCELLED';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}

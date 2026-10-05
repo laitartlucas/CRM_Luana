@@ -3,8 +3,9 @@ import { RespondiImportService } from './respondi-import.service';
 
 function makeService(token: string | undefined = 'tok') {
   const config: any = { get: jest.fn().mockReturnValue(token) };
-  const leads: any = { create: jest.fn().mockResolvedValue({}) };
-  return { service: new RespondiImportService(config, leads), leads };
+  const leads: any = { create: jest.fn().mockResolvedValue({ id: 'lead-1', name: 'Maria' }) };
+  const events: any = { emit: jest.fn() };
+  return { service: new RespondiImportService(config, leads, events), leads, events };
 }
 
 const answer = (field_title: string, value: string, field_type = 'text') => ({
@@ -45,6 +46,18 @@ describe('RespondiImportService.handleWebhook', () => {
       objections: 'Investir e não gostar',
       leadNotes: 'Como nos conheceu?\nIndicação',
     });
+  });
+
+  it('avisa a central de notificações quando cria a lead', async () => {
+    const { service, events } = makeService();
+    await service.handleWebhook({ answers: [answer('Nome', 'Maria'), answer('Telefone', '54 99999-0000')] });
+    expect(events.emit).toHaveBeenCalledWith('lead.created', { leadId: 'lead-1', name: 'Maria' });
+  });
+
+  it('não avisa quando o payload não vira lead', async () => {
+    const { service, events } = makeService();
+    await service.handleWebhook({ answers: [answer('Nome', 'Ana')] });
+    expect(events.emit).not.toHaveBeenCalled();
   });
 
   it('aceita payload sem o envelope data', async () => {

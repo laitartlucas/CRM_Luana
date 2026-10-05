@@ -1,7 +1,9 @@
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LeadSource } from '@prisma/client';
 import { LeadsService } from './leads.service';
+import { LEAD_EVENTS, LeadCreatedPayload } from '../inbox/lead.events';
 
 // Duas formas de trazer uma resposta do Respondi pra virar lead:
 //
@@ -90,6 +92,7 @@ export class RespondiImportService {
   constructor(
     private readonly config: ConfigService,
     private readonly leadsService: LeadsService,
+    private readonly events: EventEmitter2,
   ) {}
 
   /**
@@ -112,7 +115,7 @@ export class RespondiImportService {
       return;
     }
 
-    await this.leadsService.create({
+    const lead = await this.leadsService.create({
       name: mapped.name,
       phoneE164: mapped.phoneE164,
       instagram: mapped.instagram,
@@ -125,6 +128,7 @@ export class RespondiImportService {
       leadNotes: mapped.leadNotes,
     } as Parameters<LeadsService['create']>[0]);
 
+    this.events.emit(LEAD_EVENTS.CREATED, { leadId: lead.id, name: lead.name } satisfies LeadCreatedPayload);
     this.logger.log(`Lead criada via webhook do Respondi: ${mapped.name} (${mapped.phoneE164})`);
   }
 

@@ -1,5 +1,6 @@
 import { api } from './client';
 import type {
+  AppNotification,
   Appointment,
   Client,
   ClientMedia,
@@ -20,6 +21,7 @@ import type {
   ScheduleBlock,
   Service,
   SuccessBoard,
+  SearchResults,
   SuccessStage,
   Task,
   TaskInput,
@@ -218,3 +220,14 @@ export const TASKS_CHANGED_EVENT = 'tasks:changed';
 export function notifyTasksChanged() {
   window.dispatchEvent(new Event(TASKS_CHANGED_EVENT));
 }
+
+export const SearchApi = {
+  search: (q: string) => api.get<SearchResults>('/search', { params: { q } }),
+};
+
+export const InboxApi = {
+  list: (params: { unread?: boolean; limit?: number } = {}) => api.get<AppNotification[]>('/inbox', { params }),
+  unreadCount: () => api.get<{ count: number }>('/inbox/unread-count'),
+  markRead: (id: string) => api.post<{ ok: true }>(`/inbox/${id}/read`),
+  markAllRead: () => api.post<{ updated: number }>('/inbox/read-all'),
+};

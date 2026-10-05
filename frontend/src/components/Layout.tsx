@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { TASKS_CHANGED_EVENT, TasksApi } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
+import { isTypingTarget } from '../utils/search';
+import { CommandPalette } from './CommandPalette';
+import { NotificationBell } from './NotificationBell';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Painel', end: true },
@@ -49,6 +52,22 @@ function useTasksAttention() {
 export function Layout() {
   const { user, logout } = useAuth();
   const tasksAttention = useTasksAttention();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Ctrl/Cmd+K abre a busca de qualquer tela; "/" também, desde que não esteja digitando em um campo.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((open) => !open);
+      } else if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className="app-shell">
@@ -97,10 +116,22 @@ export function Layout() {
         </div>
       </aside>
       <div className="app-main">
+        <header className="topbar">
+          <button className="search-trigger" onClick={() => setPaletteOpen(true)} aria-label="Buscar (Ctrl+K)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <span className="search-trigger-text">Buscar leads, clientes, tarefas…</span>
+            <kbd>Ctrl K</kbd>
+          </button>
+          <NotificationBell />
+        </header>
         <main className="app-content">
           <Outlet />
         </main>
       </div>
+      {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
     </div>
   );
 }

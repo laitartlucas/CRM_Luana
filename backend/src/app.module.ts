@@ -25,6 +25,8 @@ import { PipelineModule } from './pipeline/pipeline.module';
 import { IntakeModule } from './intake/intake.module';
 import { ClientSuccessModule } from './client-success/client-success.module';
 import { TasksModule } from './tasks/tasks.module';
+import { InboxModule } from './inbox/inbox.module';
+import { SearchModule } from './search/search.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -70,6 +72,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     IntakeModule,
     ClientSuccessModule,
     TasksModule,
+    InboxModule,
+    SearchModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
