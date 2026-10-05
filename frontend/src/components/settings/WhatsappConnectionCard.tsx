@@ -47,23 +47,34 @@ export function WhatsappConnectionCard() {
   }
 
   return (
-    <div className="card" style={{ marginBottom: '1.25rem' }}>
-      <h2 className="section-title" style={{ marginTop: 0 }}>WhatsApp — conectar por QR Code</h2>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-        Conecta o número de WhatsApp que você já usa no celular (via Evolution API), sem precisar migrar pra Meta Cloud API.
-      </p>
-      {status?.connected ? (
-        <p>
-          Status: <strong style={{ color: 'var(--color-success)' }}>Conectado</strong>
-        </p>
-      ) : (
+    <div className="card">
+      <div className="card-head">
+        <div>
+          <h2 className="section-title">WhatsApp</h2>
+          <p className="help-text">Conecte por QR Code o número que você já usa no celular (via Evolution API), sem migrar para a Meta Cloud API.</p>
+        </div>
+        {status?.connected ? (
+          <span className="badge tone-success">
+            <span className="badge-dot" />
+            Conectado
+          </span>
+        ) : (
+          <span className="badge tone-danger">
+            <span className="badge-dot" />
+            Desconectado
+          </span>
+        )}
+      </div>
+      {!status?.connected && (
         <>
-          <p>
-            Status: <strong>Desconectado</strong>
+          <p className="help-text" style={{ color: 'var(--color-text-label)' }}>
+            Sem conexão, os lembretes e as mensagens automáticas não são enviados.
           </p>
-          <button className="btn" onClick={handleConnect} disabled={loading}>
-            {loading ? 'Gerando QR Code...' : 'Conectar'}
-          </button>
+          <div className="actions-row">
+            <button className="btn" onClick={handleConnect} disabled={loading}>
+              {loading ? 'Gerando QR Code…' : 'Conectar WhatsApp'}
+            </button>
+          </div>
           {error && (
             <p className="error-text" role="alert">
               {error}

@@ -133,7 +133,7 @@ export function AppointmentFormModal({
         {selectedClient ? (
           <div className="appointment-row">
             <span>
-              <span className={`badge ${selectedClient._kind === 'LEAD' ? 'SCHEDULED' : 'CONFIRMED'}`} style={{ marginRight: '0.4rem' }}>
+              <span className={`badge ${selectedClient._kind === 'LEAD' ? 'tone-info' : 'tone-brand'}`} style={{ marginRight: '0.4rem' }}>
                 {selectedClient._kind === 'LEAD' ? 'Lead' : 'Cliente'}
               </span>
               {selectedClient.name} ({selectedClient.phoneE164})
@@ -158,7 +158,7 @@ export function AppointmentFormModal({
                     className="slot-option"
                     onClick={() => setSelectedClient(c)}
                   >
-                    <span className={`badge ${c._kind === 'LEAD' ? 'SCHEDULED' : 'CONFIRMED'}`} style={{ marginRight: '0.4rem' }}>
+                    <span className={`badge ${c._kind === 'LEAD' ? 'tone-info' : 'tone-brand'}`} style={{ marginRight: '0.4rem' }}>
                       {c._kind === 'LEAD' ? 'Lead' : 'Cliente'}
                     </span>
                     {c.name} — {c.phoneE164}

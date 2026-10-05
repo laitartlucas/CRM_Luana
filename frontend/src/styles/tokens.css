@@ -1,0 +1,105 @@
+/* =========================================================================
+   Luana Laitart Studio — CRM · Design tokens
+   Fonte única de cor, tipografia, espaçamento e estados.
+   Regra de ouro: uma função = um token. Nunca use hex solto nos componentes.
+   ========================================================================= */
+
+
+:root {
+  /* ---------- Marca ---------- */
+  --brand-espresso: #2A221D;   /* menu lateral, painel de marca do login */
+  --brand-cream:    #F6F1EA;   /* fundo da aplicação */
+  --brand-caramel:  #8B5A3C;   /* AÇÃO: botão principal, link, ativo, foco, progresso */
+  --brand-gold:     #C9A45C;   /* ASSINATURA: só sobre espresso (monograma, indicador do menu, avatar) */
+
+  /* ---------- Caramelo (ação) ---------- */
+  --caramel-50:  #FAF3EC;  /* linha em hover, linha selecionada */
+  --caramel-100: #F3E7DC;  /* filtro/aba/chip ativo (fundo), halo de foco */
+  --caramel-200: #E6CDB7;  /* borda de selecionado, série "agendados" */
+  --caramel-300: #CFA585;  /* série secundária de gráfico, score baixo */
+  --caramel-500: #A26C49;  /* barra de progresso alternativa */
+  --caramel-600: #8B5A3C;  /* ação principal */
+  --caramel-700: #74482F;  /* hover da ação / texto sobre caramelo-100 */
+  --caramel-800: #5C3824;  /* pressionado */
+
+  /* ---------- Neutros quentes ---------- */
+  --neutral-0:   #FFFFFF;  /* card, input */
+  --neutral-50:  #FBF8F4;  /* cabeçalho de tabela, trilho de barra */
+  --neutral-100: #F6F1EA;  /* fundo do app */
+  --neutral-200: #EEE6DB;  /* coluna do kanban, divisória, desabilitado (fundo) */
+  --neutral-300: #E2D8CB;  /* borda de card */
+  --neutral-400: #CDBFAE;  /* borda de input / botão secundário */
+  --neutral-500: #A08F7E;  /* ícone decorativo, texto desabilitado (não usar em texto comum: 3,1:1) */
+  --neutral-600: #6E5F52;  /* texto secundário (6,1:1 no branco) */
+  --neutral-700: #4C4037;  /* rótulos */
+  --neutral-900: #2A221C;  /* texto principal */
+
+  /* ---------- Menu lateral (escuro) ---------- */
+  --side-bg:        #2A221D;
+  --side-hover:     #3A3029;
+  --side-active:    #4A3D33;
+  --side-text:      #B5A796;  /* item inativo (6,6:1) */
+  --side-text-on:   #F3ECE2;  /* item ativo (13,3:1) */
+  --side-indicator: #C9A45C;
+
+  /* ---------- Estados semânticos (fg / bg / borda) ---------- */
+  --success-fg: #4F6B3A;  --success-bg: #EBF0E2;  --success-border: #C9D6B5;
+  --warning-fg: #7D5608;  --warning-bg: #F8EDD3;  --warning-border: #E8CF94;
+  --danger-fg:  #9B2C2C;  --danger-bg:  #F7E4E0;  --danger-border:  #E5B8B0;  --danger-hover: #7E2222;
+  --info-fg:    #3E5C76;  --info-bg:    #E5ECF1;  --info-border:    #BFCFDC;
+
+  /* ---------- Aliases semânticos (use estes nos componentes) ---------- */
+  --color-bg:            var(--neutral-100);
+  --color-surface:       var(--neutral-0);
+  --color-surface-muted: var(--neutral-50);
+  --color-border:        var(--neutral-300);
+  --color-border-strong: var(--neutral-400);
+  --color-text:          var(--neutral-900);
+  --color-text-muted:    var(--neutral-600);
+  --color-text-label:    var(--neutral-700);
+  --color-action:        var(--caramel-600);
+  --color-action-hover:  var(--caramel-700);
+  --color-action-press:  var(--caramel-800);
+  --color-on-action:     #FFFFFF;
+  --color-selected-bg:   var(--caramel-100);
+  --color-selected-fg:   var(--caramel-700);
+  --color-selected-border: var(--caramel-200);
+  --color-row-hover:     var(--caramel-50);
+  --color-focus:         var(--caramel-600);
+  --color-disabled-bg:   var(--neutral-200);
+  --color-disabled-fg:   var(--neutral-500);
+
+  /* ---------- Tipografia ---------- */
+  --font-display: "Cormorant Garamond", Georgia, serif;  /* títulos, números grandes */
+  --font-body:    "Karla", system-ui, sans-serif;        /* todo o resto */
+  --fs-h1: 44px;  --fs-h1-mobile: 36px;
+  --fs-h2: 26px;  --fs-card-title: 24px;
+  --fs-kpi: 40px; --fs-kpi-mobile: 34px;
+  --fs-body: 15px; --fs-sm: 14px; --fs-xs: 13px;
+  --fs-overline: 11px; --ls-overline: .14em;  /* rótulos em CAIXA ALTA */
+  --ls-button: .08em;
+  /* Números em Cormorant SEMPRE com algarismos alinhados: */
+  --numeric: lining-nums tabular-nums;
+
+  /* ---------- Espaço, raio, sombra ---------- */
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px; --space-10: 40px;
+  --radius-sm: 3px; --radius: 4px; --radius-lg: 6px; --radius-pill: 999px;
+  --shadow-drag: 0 8px 20px rgba(42, 34, 29, .14);
+  --focus-ring: 0 0 0 3px var(--caramel-100);
+
+  /* ---------- Layout ---------- */
+  --sidebar-w: 260px;
+  --touch-min: 44px;
+  --page-pad: 40px; --page-pad-mobile: 16px;
+}
+
+/* Breakpoints (use os mesmos em todo o app)
+   ≤1100px  grades de 3/2 colunas viram 1; índice de Configurações vira chips
+   ≤900px   menu lateral vira barra superior fixa com navegação rolável
+   ≤760px   tabelas viram cards (thead oculto, rótulo via data-label)
+   ≤560px   botões do cabeçalho ocupam a largura; filtros 2 por linha
+*/
+
+/* Foco visível global */
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }

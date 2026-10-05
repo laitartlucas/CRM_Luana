@@ -7,6 +7,7 @@ import { errorMessage, useToast } from '../components/ui/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { SendMessageModal } from '../components/SendMessageModal';
 import { TasksPanel } from '../components/TasksPanel';
+import { AppointmentStatusBadge } from '../components/ui/StatusBadge';
 
 const REPORT_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'painPoints', label: 'Principais dores' },
@@ -213,7 +214,7 @@ export default function LeadDetail() {
                 <div>
                   {new Date(a.startAt).toLocaleString('pt-BR')} — {a.service?.name}
                 </div>
-                <span className={`badge ${a.status}`}>{a.status}</span>
+                <AppointmentStatusBadge status={a.status} />
               </div>
             ))}
             {appointments.length === 0 && <p style={{ color: 'var(--color-text-muted)' }}>Nenhum agendamento ainda.</p>}

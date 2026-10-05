@@ -5,6 +5,7 @@ import type { Client, PipelineBoard, PipelineStage } from '../api/types';
 import { KanbanBoard, KanbanColumnDef } from '../components/KanbanBoard';
 import { CallScheduleModal } from '../components/CallScheduleModal';
 import { PIPELINE_STAGE_LABELS, PIPELINE_STAGE_ORDER } from '../constants/pipelineLabels';
+import { LoadingState } from '../components/ui/StateViews';
 
 const COLUMNS: KanbanColumnDef[] = PIPELINE_STAGE_ORDER.map((stage) => ({
   id: stage,
@@ -53,14 +54,21 @@ export default function Pipeline() {
     }
   }
 
-  if (!board) return <p>Carregando...</p>;
+  if (!board) return <LoadingState />;
 
   return (
     <div>
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>Pipeline Comercial</h1>
+        <div>
+          <h1>Pipeline comercial</h1>
+          <p className="page-subtitle">Arraste os cartões entre as etapas ou use o seletor “Mover para…” em cada um.</p>
+        </div>
       </div>
-      {error && <p className="error-text">{error}</p>}
+      {error && (
+        <div className="alert danger" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+          <strong>{error}</strong>
+        </div>
+      )}
 
       <KanbanBoard
         columns={COLUMNS}
@@ -68,17 +76,24 @@ export default function Pipeline() {
         getItemLabel={(client: Client) => client.name || 'lead sem nome'}
         onMove={handleMove}
         renderCard={(client: Client) => (
-          <Link to={`/leads/${client.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+          <Link to={`/leads/${client.id}`}>
             <strong>{client.name || '(sem nome)'}</strong>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{client.phoneE164}</div>
+            {client.phoneE164 && <div className="kanban-card-sub">{client.phoneE164}</div>}
             {client.nextActionNote && (
-              <div style={{ fontSize: '0.75rem', marginTop: '0.3rem' }}>📌 {client.nextActionNote}</div>
+              <div className="kanban-card-note">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" style={{ flex: 'none', marginTop: 2 }}>
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+                <span>{client.nextActionNote}</span>
+              </div>
             )}
             <div className="kanban-card-meta">
-              <span className={`score-badge${(client.leadScore ?? 0) >= 60 ? ' high' : ''}`}>
-                Score {client.leadScore ?? 0}
-              </span>
-              {client.proposalValue != null && <span>R$ {client.proposalValue}</span>}
+              <span className={`score-badge${(client.leadScore ?? 0) >= 60 ? ' high' : ''}`}>Score {client.leadScore ?? 0}</span>
+              {client.proposalValue != null && (
+                <span className="kanban-card-value">
+                  {Number(client.proposalValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                </span>
+              )}
             </div>
           </Link>
         )}

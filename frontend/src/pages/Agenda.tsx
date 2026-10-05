@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -13,13 +13,29 @@ import { useToast } from '../components/ui/Toast';
 import { AppointmentDetailModal } from '../components/AppointmentDetailModal';
 import { BlockFormModal } from '../components/BlockFormModal';
 
-const STATUS_COLOR: Record<string, string> = {
-  SCHEDULED: '#4a5590',
-  CONFIRMED: '#4c7a52',
-  COMPLETED: '#7a7a7a',
-  CANCELLED: '#b3423a',
-  NO_SHOW: '#a65221',
-};
+// As cores de cada situação ficam no CSS (.fc .ev-STATUS), com os mesmos tons dos selos do resto do sistema.
+const LEGEND = [
+  { label: 'Confirmado', bg: 'var(--success-bg)', border: 'var(--success-fg)' },
+  { label: 'Aguardando', bg: 'var(--warning-bg)', border: 'var(--warning-fg)' },
+  { label: 'No-show', bg: 'var(--danger-bg)', border: 'var(--danger-fg)' },
+  { label: 'Concluído', bg: 'var(--neutral-200)', border: 'var(--neutral-500)' },
+  { label: 'Bloqueado', bg: 'var(--neutral-300)', border: 'var(--neutral-500)' },
+];
+
+const NARROW_QUERY = '(max-width: 760px)';
+
+/** No celular a semana inteira não cabe: a agenda abre no dia, com navegação compacta. */
+function useNarrowScreen() {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(NARROW_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.(NARROW_QUERY);
+    if (!mq) return;
+    const onChange = () => setNarrow(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return narrow;
+}
 
 export default function Agenda() {
   const { professional, loading } = useProfessional();
@@ -30,6 +46,15 @@ export default function Agenda() {
   const [creatingAt, setCreatingAt] = useState<Date | null>(null);
   const [blockingAt, setBlockingAt] = useState<Date | null>(null);
   const appointmentsCache = useRef<Map<string, Appointment>>(new Map());
+  const narrow = useNarrowScreen();
+
+  // Ao cruzar o limite (girar o celular, redimensionar a janela) troca entre semana e dia.
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    const target = narrow ? 'timeGridDay' : 'timeGridWeek';
+    if (api.view.type !== 'dayGridMonth' && api.view.type !== target) api.changeView(target);
+  }, [narrow]);
 
   const loadRange = useCallback(
     async (start: Date, end: Date) => {
@@ -48,8 +73,7 @@ export default function Agenda() {
           title: `${a.client?.name} — ${a.service?.name}`,
           start: a.startAt,
           end: a.endAt,
-          backgroundColor: STATUS_COLOR[a.status],
-          borderColor: STATUS_COLOR[a.status],
+          classNames: [`ev-${a.status}`],
         }));
 
       const blockEvents = blocks.data.map((b) => ({
@@ -58,7 +82,6 @@ export default function Agenda() {
         start: b.startAt,
         end: b.endAt,
         display: 'background',
-        backgroundColor: '#e6e1db',
       }));
 
       setEvents([...appointmentEvents, ...blockEvents]);
@@ -100,8 +123,8 @@ export default function Agenda() {
   return (
     <div>
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>Agenda</h1>
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <h1>Agenda</h1>
+        <div className="toolbar-actions">
           <button className="btn secondary" onClick={() => setBlockingAt(new Date())}>
             Bloquear horário
           </button>
@@ -112,11 +135,26 @@ export default function Agenda() {
       </div>
 
       <div className="card">
+        <ul className="calendar-legend" aria-label="Legenda das cores">
+          {LEGEND.map((item) => (
+            <li key={item.label}>
+              <i style={{ background: item.bg, borderColor: item.border }} />
+              {item.label}
+            </li>
+          ))}
+        </ul>
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
+          initialView={narrow ? 'timeGridDay' : 'timeGridWeek'}
+          headerToolbar={
+            narrow
+              ? { left: 'title', center: '', right: 'prev,today,next' }
+              : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }
+          }
+          footerToolbar={narrow ? { center: 'dayGridMonth,timeGridWeek,timeGridDay' } : undefined}
+          nowIndicator
+          dayHeaderFormat={narrow ? { weekday: 'long', day: '2-digit', month: '2-digit' } : { weekday: 'short', day: '2-digit', month: '2-digit' }}
           locale={ptBrLocale}
           allDaySlot={false}
           slotMinTime="07:00:00"

@@ -71,10 +71,12 @@ export default function Tasks() {
   return (
     <div>
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>Tarefas</h1>
-        <button className="btn" onClick={() => setCreating(true)}>
-          + Nova tarefa
-        </button>
+        <h1>Tarefas</h1>
+        <div className="toolbar-actions">
+          <button className="btn" onClick={() => setCreating(true)}>
+            + Nova tarefa
+          </button>
+        </div>
       </div>
 
       <div className="card">
@@ -96,16 +98,10 @@ export default function Tasks() {
           })}
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center', margin: '1rem 0' }}>
-          <input
-            placeholder="Buscar por tarefa ou pessoa..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Buscar tarefas"
-            style={{ width: '100%', maxWidth: 320 }}
-          />
+        <div className="task-tools">
+          <input placeholder="Buscar por tarefa ou pessoa..." value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Buscar tarefas" />
           {canSeeAll && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem' }}>
+            <label className="check-label">
               <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />
               Só as minhas
             </label>
