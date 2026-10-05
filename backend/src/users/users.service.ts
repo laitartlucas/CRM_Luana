@@ -1,4 +1,5 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -55,17 +56,57 @@ export class UsersService {
     });
   }
 
+  /** Impede deixar o sistema sem nenhum ADMIN ativo (rebaixar, desativar ou trocar o papel do último). */
+  private async assertNotLastAdmin(id: string) {
+    const target = await this.prisma.user.findUnique({ where: { id }, select: { role: true, active: true } });
+    if (target?.role !== Role.ADMIN || !target.active) return;
+    const otherAdmins = await this.prisma.user.count({ where: { role: Role.ADMIN, active: true, id: { not: id } } });
+    if (otherAdmins === 0) {
+      throw new BadRequestException('Não é possível remover o último administrador ativo do sistema.');
+    }
+  }
+
   async update(id: string, dto: UpdateUserDto) {
     await this.findById(id);
-    return this.prisma.user.update({ where: { id }, data: dto, select: PUBLIC_SELECT });
+    const losesAdmin = dto.role !== undefined && dto.role !== Role.ADMIN;
+    if (losesAdmin) await this.assertNotLastAdmin(id);
+    // Papel mudou: derruba as sessões abertas para o novo papel valer já no próximo login.
+    const revoke = dto.role !== undefined ? { tokenVersion: { increment: 1 } } : {};
+    return this.prisma.user.update({ where: { id }, data: { ...dto, ...revoke }, select: PUBLIC_SELECT });
   }
 
   async deactivate(id: string) {
     await this.findById(id);
+    await this.assertNotLastAdmin(id);
     return this.prisma.user.update({
       where: { id },
-      data: { active: false },
+      data: { active: false, tokenVersion: { increment: 1 } },
       select: PUBLIC_SELECT,
+    });
+  }
+
+  /** A própria pessoa troca a senha confirmando a atual; todas as sessões abertas são encerradas. */
+  async changeOwnPassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user?.passwordHash || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new UnauthorizedException('Senha atual incorreta.');
+    }
+    await this.setPassword(userId, newPassword);
+    return { ok: true };
+  }
+
+  /** Redefinição por um ADMIN (esqueceu a senha). Também encerra as sessões do usuário. */
+  async resetPassword(id: string, newPassword: string) {
+    await this.findById(id);
+    await this.setPassword(id, newPassword);
+    return { ok: true };
+  }
+
+  private async setPassword(id: string, newPassword: string) {
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({
+      where: { id },
+      data: { passwordHash, tokenVersion: { increment: 1 }, failedLoginCount: 0, lockedUntil: null },
     });
   }
 

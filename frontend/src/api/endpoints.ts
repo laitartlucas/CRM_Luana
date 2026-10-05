@@ -185,6 +185,8 @@ type MessageTemplatesResponse = {
 };
 
 export const UsersApi = {
+  changeOwnPassword: (currentPassword: string, newPassword: string) =>
+    api.post<{ ok: true }>('/users/me/password', { currentPassword, newPassword }),
   getMessageTemplates: () => api.get<MessageTemplatesResponse>('/users/me/message-templates'),
   updateMessageTemplates: (data: Partial<MessageTemplates>) =>
     api.put<MessageTemplatesResponse>('/users/me/message-templates', data),

@@ -171,6 +171,12 @@ model User {
   messageTemplates Json?
   customMessageTemplates Json?
 
+  // Segurança de sessão: tokenVersion invalida JWTs já emitidos (logout, troca
+  // de senha, desativação); failedLoginCount/lockedUntil bloqueiam brute-force.
+  tokenVersion     Int       @default(0)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

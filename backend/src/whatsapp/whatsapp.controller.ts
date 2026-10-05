@@ -20,6 +20,8 @@ import { Request } from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { ConversationEngineService } from './conversation/conversation-engine.service';
 import { WHATSAPP_PROVIDER, WhatsappProvider } from './providers/whatsapp-provider.interface';
 import { EvolutionWhatsappProvider } from './providers/evolution-whatsapp.provider';
@@ -119,6 +121,7 @@ export class WhatsappController {
   }
 
   /** Status de conexão da instância da Evolution API (usado pela tela de Configurações). */
+  @Roles(Role.ADMIN, Role.MANAGER)
   @UseGuards(RolesGuard)
   @Get('evolution/status')
   async evolutionStatus() {
@@ -127,6 +130,7 @@ export class WhatsappController {
   }
 
   /** Garante a instância criada + webhook configurado e devolve o QR Code pra escanear. */
+  @Roles(Role.ADMIN, Role.MANAGER)
   @UseGuards(RolesGuard)
   @Post('evolution/connect')
   async evolutionConnect() {
@@ -232,6 +236,7 @@ export class WhatsappController {
    * depender da Meta Cloud API estar configurada. Usa o mesmo motor de
    * conversa do fluxo real. Ver README para o passo a passo de teste.
    */
+  @Roles(Role.ADMIN)
   @UseGuards(RolesGuard)
   @Post('simulate/inbound')
   async simulateInbound(@Body() dto: SimulateInboundDto) {

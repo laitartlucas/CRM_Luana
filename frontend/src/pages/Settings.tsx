@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { CalendarSyncApi, ClientsApi, UsersApi, WhatsappApi } from '../api/endpoints';
 import type { CustomMessageTemplate, MessageTemplateKey, MessageTemplateMeta, MessageTemplates } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { ChangePasswordCard } from '../components/ChangePasswordCard';
 
 const WIPE_CONFIRMATION_PHRASE = 'APAGAR TUDO';
 
@@ -262,6 +263,8 @@ export default function Settings() {
           Google Calendar conectado com sucesso!
         </div>
       )}
+
+      <ChangePasswordCard />
 
       <div className="card" style={{ marginBottom: '1.25rem' }}>
         <h3 style={{ marginTop: 0 }}>Google Calendar</h3>

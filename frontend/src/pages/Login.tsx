@@ -20,7 +20,7 @@ export default function Login() {
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 429) {
-        setError('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+        setError(err?.response?.data?.message ?? 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
       } else if (status === 401) {
         setError('Usuário ou senha inválidos.');
       } else {
