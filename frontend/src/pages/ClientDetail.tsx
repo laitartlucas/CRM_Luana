@@ -3,7 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ClientsApi, ClientSuccessApi } from '../api/endpoints';
 import type { Appointment, Client, ClientMedia, SuccessStage } from '../api/types';
 import { PAYMENT_METHOD_OPTIONS, SUCCESS_STAGE_LABELS, SUCCESS_STAGE_ORDER } from '../constants/pipelineLabels';
+import { errorMessage, useToast } from '../components/ui/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { SendMessageModal } from '../components/SendMessageModal';
+import { TasksPanel } from '../components/TasksPanel';
 
 const STYLE_FIELDS: Array<{ key: keyof Client; label: string }> = [
   { key: 'bodyType', label: 'Tipo de corpo' },
@@ -16,6 +19,8 @@ const STYLE_FIELDS: Array<{ key: keyof Client; label: string }> = [
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [client, setClient] = useState<Client | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [media, setMedia] = useState<ClientMedia[]>([]);
@@ -54,6 +59,9 @@ export default function ClientDetail() {
         email: client.email,
         paymentMethod: client.paymentMethod,
       });
+      toast.success('Ficha salva.');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível salvar a ficha.'));
     } finally {
       setSaving(false);
     }
@@ -62,8 +70,13 @@ export default function ClientDetail() {
   async function handleUpload(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || !id) return;
-    await ClientsApi.uploadMedia(id, file);
-    load();
+    try {
+      await ClientsApi.uploadMedia(id, file);
+      toast.success('Foto enviada.');
+      load();
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível enviar a foto.'));
+    }
     e.target.value = '';
   }
 
@@ -73,6 +86,8 @@ export default function ClientDetail() {
     try {
       await ClientSuccessApi.changeStage(id, { toStage });
       load();
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível mudar a etapa.'));
     } finally {
       setChangingStage(false);
     }
@@ -80,21 +95,29 @@ export default function ClientDetail() {
 
   async function handleGetIntakeLink() {
     if (!id) return;
-    const res = await ClientSuccessApi.intakeLink(id);
-    setIntakeLink(res.data.url);
+    try {
+      const res = await ClientSuccessApi.intakeLink(id);
+      setIntakeLink(res.data.url);
+    } catch (err) {
+      toast.error(errorMessage(err, 'Não foi possível gerar o link da ficha.'));
+    }
   }
 
   async function handleDelete() {
     if (!id || !client) return;
-    if (!window.confirm(`Excluir ${client.name || 'esta cliente'} definitivamente? Essa ação não pode ser desfeita.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Excluir ${client.name || 'esta cliente'}?`,
+      message: 'Apaga também agendamentos, conversas e fotos dela. Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       await ClientsApi.remove(id);
       navigate('/clientes');
     } catch (err: any) {
-      window.alert(err?.response?.data?.message ?? 'Não foi possível excluir esta cliente.');
+      toast.error(errorMessage(err, 'Não foi possível excluir esta cliente.'));
       setDeleting(false);
     }
   }
@@ -125,7 +148,7 @@ export default function ClientDetail() {
 
       <div className="two-col">
         <div className="card">
-          <h3 style={{ marginTop: 0 }}>Ficha de estilo</h3>
+          <h2 className="section-title" style={{ marginTop: 0 }}>Ficha de estilo</h2>
           <div className="form-grid">
             <label className="field">
               Nome
@@ -162,7 +185,7 @@ export default function ClientDetail() {
             </button>
           </div>
 
-          <h3>Sucesso do Cliente</h3>
+          <h2 className="section-title">Sucesso do Cliente</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem' }}>
             {SUCCESS_STAGE_ORDER.map((stage) => (
               <button
@@ -183,7 +206,7 @@ export default function ClientDetail() {
             <input readOnly value={intakeLink} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
           )}
 
-          <h3>LGPD</h3>
+          <h2 className="section-title">LGPD</h2>
           <p style={{ fontSize: '0.85rem' }}>
             Consentimento WhatsApp: <strong>{client.whatsappConsent ? 'Sim' : 'Não'}</strong>
           </p>
@@ -194,7 +217,7 @@ export default function ClientDetail() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Fotos e mood boards</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Fotos e mood boards</h2>
             <label className="btn secondary" style={{ display: 'inline-block', marginBottom: '0.85rem' }}>
               + Enviar foto
               <input type="file" accept="image/*" onChange={handleUpload} style={{ display: 'none' }} />
@@ -207,8 +230,10 @@ export default function ClientDetail() {
             </div>
           </div>
 
+          <TasksPanel client={{ id: client.id, name: client.name }} />
+
           <div className="card">
-            <h3 style={{ marginTop: 0 }}>Histórico de atendimentos</h3>
+            <h2 className="section-title" style={{ marginTop: 0 }}>Histórico de atendimentos</h2>
             {appointments.map((a) => (
               <div className="appointment-row" key={a.id}>
                 <div>

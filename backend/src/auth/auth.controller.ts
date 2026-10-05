@@ -72,26 +72,23 @@ export class AuthController {
     if (!token) {
       throw new UnauthorizedException('Sessão expirada, faça login novamente.');
     }
-    try {
-      const payload = this.authService.verifyRefreshToken(token);
-      const tokens = this.authService.issueTokens({
-        id: payload.sub,
-        email: payload.email,
-        role: payload.role,
-        timezone: payload.timezone,
-      });
-      this.setSessionCookies(res, tokens);
-      return { ok: true };
-    } catch {
-      throw new UnauthorizedException('Sessão expirada, faça login novamente.');
-    }
+    const tokens = await this.authService.refreshSession(token);
+    this.setSessionCookies(res, tokens);
+    return { ok: true };
   }
 
+  // Público de propósito: com o access token expirado o logout ainda precisa
+  // limpar os cookies; a revogação usa o refresh token, se ainda for válido.
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(ACCESS_COOKIE, { path: '/' });
-    res.clearCookie(REFRESH_COOKIE, { path: '/' });
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.cookies?.[REFRESH_COOKIE]);
+    // Em produção os cookies são SameSite=None; Secure — o navegador só apaga
+    // se os atributos baterem com os usados ao criar.
+    const { maxAge: _maxAge, ...clearOptions } = this.cookieOptions(0);
+    res.clearCookie(ACCESS_COOKIE, clearOptions);
+    res.clearCookie(REFRESH_COOKIE, clearOptions);
     return { ok: true };
   }
 

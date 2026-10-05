@@ -1,15 +1,17 @@
 import { FormEvent, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { safeNextPath } from '../utils/auth';
 import { useAuth } from '../auth/AuthContext';
 
 export default function Login() {
   const { user, login } = useAuth();
+  const [searchParams] = useSearchParams();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={safeNextPath(searchParams.get('next'))} replace />;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -20,7 +22,7 @@ export default function Login() {
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 429) {
-        setError('Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
+        setError(err?.response?.data?.message ?? 'Muitas tentativas de login. Aguarde alguns minutos antes de tentar novamente.');
       } else if (status === 401) {
         setError('Usuário ou senha inválidos.');
       } else {
@@ -33,7 +35,7 @@ export default function Login() {
 
   return (
     <div className="login-shell">
-      <div className="login-brand-panel">
+      <aside className="login-brand-panel" aria-label="Luana Laitart">
         <div className="login-brand-eyebrow">LUANA LAITART</div>
         <div className="login-brand-center">
           <img src="/logo.png" alt="Luana Laitart" />
@@ -50,8 +52,8 @@ export default function Login() {
           <span>© {new Date().getFullYear()} Luana Laitart</span>
           <span>luanalaitart.com</span>
         </div>
-      </div>
-      <div className="login-form-panel">
+      </aside>
+      <main className="login-form-panel">
         <form className="login-form-card" onSubmit={handleSubmit}>
           <div>
             <h1>Bem-vinda de volta</h1>
@@ -77,12 +79,16 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
-          {error && <span className="error-text">{error}</span>}
+          {error && (
+            <span className="error-text" role="alert">
+              {error}
+            </span>
+          )}
           <button className="btn" type="submit" disabled={loading} style={{ height: 52 }}>
             {loading ? 'ENTRANDO...' : 'ENTRAR'}
           </button>
         </form>
-      </div>
+      </main>
     </div>
   );
 }

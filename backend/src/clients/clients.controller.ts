@@ -16,6 +16,7 @@ import { ConfigService } from '@nestjs/config';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { ListClientsQueryDto } from './dto/list-clients.dto';
 import { Audit } from '../common/decorators/audit.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { ClientsService } from './clients.service';
@@ -36,8 +37,8 @@ export class ClientsController {
   ) {}
 
   @Get()
-  list(@Query('search') search?: string) {
-    return this.clientsService.list(search);
+  list(@Query() query: ListClientsQueryDto) {
+    return this.clientsService.list(query);
   }
 
   // Precisa vir antes de ":id" — senão "success-board" seria interpretado

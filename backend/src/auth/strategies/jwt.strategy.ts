@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PrismaService } from '../../prisma/prisma.service';
 import { JwtPayload } from '../auth.service';
 
 function cookieExtractor(req: Request): string | null {
@@ -11,7 +12,10 @@ function cookieExtractor(req: Request): string | null {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         cookieExtractor,
@@ -22,12 +26,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
+  /**
+   * Relê o usuário a cada request: conta desativada, sessão revogada
+   * (tokenVersion) ou papel alterado passam a valer na hora, sem esperar o
+   * access token de 15 minutos expirar.
+   */
   async validate(payload: JwtPayload) {
-    return {
-      id: payload.sub,
-      email: payload.email,
-      role: payload.role,
-      timezone: payload.timezone,
-    };
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true, timezone: true, active: true, tokenVersion: true },
+    });
+    if (!user || !user.active || (payload.tv ?? 0) !== user.tokenVersion) {
+      throw new UnauthorizedException('Sessão inválida, faça login novamente.');
+    }
+    return { id: user.id, email: user.email, role: user.role, timezone: user.timezone };
   }
 }

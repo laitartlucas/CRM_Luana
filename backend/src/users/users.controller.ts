@@ -7,6 +7,7 @@ import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-use
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto, ResetPasswordDto } from './dto/change-password.dto';
 import { UpdateMessageTemplatesDto } from './dto/update-message-templates.dto';
 import { CreateCustomMessageTemplateDto, UpdateCustomMessageTemplateDto } from './dto/custom-message-template.dto';
 
@@ -59,6 +60,19 @@ export class UsersController {
   @Audit('user')
   removeCustomMessageTemplate(@CurrentUser() user: AuthenticatedUser, @Param('templateId') templateId: string) {
     return this.usersService.removeCustomTemplate(user.id, templateId);
+  }
+
+  /** Troca da própria senha (exige a atual). Encerra todas as sessões — é preciso entrar de novo. */
+  @Post('me/password')
+  changeOwnPassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePasswordDto) {
+    return this.usersService.changeOwnPassword(user.id, dto.currentPassword, dto.newPassword);
+  }
+
+  @Roles(Role.ADMIN)
+  @Audit('user')
+  @Post(':id/password')
+  resetPassword(@Param('id') id: string, @Body() dto: ResetPasswordDto) {
+    return this.usersService.resetPassword(id, dto.newPassword);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER)

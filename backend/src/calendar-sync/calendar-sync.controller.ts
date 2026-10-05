@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   HttpCode,
@@ -16,6 +17,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { randomBytes } from 'crypto';
 import { Request, Response } from 'express';
+import { Role } from '@prisma/client';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { CalendarSyncService } from './calendar-sync.service';
@@ -101,7 +103,11 @@ export class CalendarSyncController {
   }
 
   @Get('health/:professionalId')
-  health(@Param('professionalId') professionalId: string) {
+  health(@Param('professionalId') professionalId: string, @CurrentUser() user: AuthenticatedUser) {
+    // Estado da conexão Google de outra pessoa só é visível para ADMIN/MANAGER.
+    if (user.id !== professionalId && user.role === Role.ATTENDANT) {
+      throw new ForbiddenException('Sem permissão para ver a conexão de outro profissional.');
+    }
     return this.calendarSyncService.health(professionalId);
   }
 }

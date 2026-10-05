@@ -241,3 +241,81 @@ export interface ClientMedia {
   caption?: string | null;
   createdAt: string;
 }
+
+export type TaskPriority = 'LOW' | 'NORMAL' | 'HIGH';
+export type TaskStatus = 'OPEN' | 'DONE';
+export type TaskScope = 'overdue' | 'today' | 'upcoming' | 'nodate' | 'done' | 'open';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  dueAt: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  completedAt: string | null;
+  assigneeId: string | null;
+  assignee: { id: string; name: string } | null;
+  clientId: string | null;
+  client: { id: string; name: string; funnelStage: 'LEAD' | 'PIPELINE' | 'CLIENT' | 'LOST' } | null;
+  createdAt: string;
+}
+
+export interface TaskInput {
+  title: string;
+  description?: string | null;
+  dueAt?: string | null;
+  priority?: TaskPriority;
+  assigneeId?: string;
+  clientId?: string | null;
+}
+
+export interface TaskSummary {
+  overdue: number;
+  today: number;
+  upcoming: number;
+  nodate: number;
+  attention: number;
+}
+
+export interface SearchHit {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  href: string;
+}
+
+export interface SearchResults {
+  leads: SearchHit[];
+  clients: SearchHit[];
+  appointments: SearchHit[];
+  tasks: SearchHit[];
+}
+
+export type NotificationType = 'TASK_DUE' | 'HUMAN_HANDOFF' | 'NEW_LEAD' | 'APPOINTMENT_BOOKED' | 'APPOINTMENT_CANCELLED';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ListQueryParams {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}

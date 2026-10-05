@@ -228,7 +228,7 @@ export function LeadFormModal({ onClose, onCreated }: { onClose: () => void; onC
         )}
       </div>
 
-      <h3 style={{ marginBottom: '0.4rem' }}>Relatório da lead</h3>
+      <h2 className="section-title" style={{ marginBottom: '0.4rem' }}>Relatório da lead</h2>
       <div className="form-grid">
         <label className="field">
           Principais dores

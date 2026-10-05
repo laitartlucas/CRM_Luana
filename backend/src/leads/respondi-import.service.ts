@@ -1,7 +1,9 @@
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LeadSource } from '@prisma/client';
 import { LeadsService } from './leads.service';
+import { LEAD_EVENTS, LeadCreatedPayload } from '../inbox/lead.events';
 
 // Duas formas de trazer uma resposta do Respondi pra virar lead:
 //
@@ -49,6 +51,15 @@ function normalizeLabel(label: string): string {
     .trim();
 }
 
+// Número digitado à mão costuma vir sem o código do país (ex.: "54 99999-0000").
+// DDD + número no Brasil tem 10 ou 11 dígitos; nesse caso assumimos +55 em vez
+// de gravar um número de outro país.
+function toE164(value: string): string {
+  if (value.startsWith('+')) return value;
+  const digits = value.replace(/\D/g, '');
+  return digits.length === 10 || digits.length === 11 ? `+55${digits}` : `+${digits}`;
+}
+
 // Perguntas de múltipla escolha (radio/checkbox) vêm com o `value` como um
 // array serializado em string (ex.: '["Insegura e comparando..."]'); telefone
 // vem como objeto serializado (ex.: '{"country":"55","phone":"54999..."}')
@@ -81,6 +92,7 @@ export class RespondiImportService {
   constructor(
     private readonly config: ConfigService,
     private readonly leadsService: LeadsService,
+    private readonly events: EventEmitter2,
   ) {}
 
   /**
@@ -103,7 +115,7 @@ export class RespondiImportService {
       return;
     }
 
-    await this.leadsService.create({
+    const lead = await this.leadsService.create({
       name: mapped.name,
       phoneE164: mapped.phoneE164,
       instagram: mapped.instagram,
@@ -116,6 +128,7 @@ export class RespondiImportService {
       leadNotes: mapped.leadNotes,
     } as Parameters<LeadsService['create']>[0]);
 
+    this.events.emit(LEAD_EVENTS.CREATED, { leadId: lead.id, name: lead.name } satisfies LeadCreatedPayload);
     this.logger.log(`Lead criada via webhook do Respondi: ${mapped.name} (${mapped.phoneE164})`);
   }
 
@@ -175,7 +188,7 @@ export class RespondiImportService {
       if (NAME_KEYS.includes(key)) {
         result.name = value;
       } else if (PHONE_KEYS.includes(key)) {
-        result.phoneE164 = value.startsWith('+') ? value : `+${value.replace(/\D/g, '')}`;
+        result.phoneE164 = toE164(value);
       } else if (key === 'instagram') {
         result.instagram = value;
       } else if (key === 'cidade') {

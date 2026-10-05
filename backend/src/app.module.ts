@@ -24,8 +24,13 @@ import { LeadsModule } from './leads/leads.module';
 import { PipelineModule } from './pipeline/pipeline.module';
 import { IntakeModule } from './intake/intake.module';
 import { ClientSuccessModule } from './client-success/client-success.module';
+import { TasksModule } from './tasks/tasks.module';
+import { InboxModule } from './inbox/inbox.module';
+import { SearchModule } from './search/search.module';
+import { ReportsModule } from './reports/reports.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
@@ -67,10 +72,16 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     PipelineModule,
     IntakeModule,
     ClientSuccessModule,
+    TasksModule,
+    InboxModule,
+    SearchModule,
+    ReportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Global: qualquer @Roles() é aplicado, mesmo que o controller esqueça o @UseGuards.
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     {

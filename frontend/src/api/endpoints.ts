@@ -1,5 +1,6 @@
 import { api } from './client';
 import type {
+  AppNotification,
   Appointment,
   Client,
   ClientMedia,
@@ -9,10 +10,12 @@ import type {
   FunnelReport,
   FunnelStageEvent,
   ImportedRespondiLead,
+  ListQueryParams,
   LeadSource,
   MessageTemplateMeta,
   MessageTemplates,
   OriginReportEntry,
+  Paginated,
   PipelineBoard,
   PipelineMetrics,
   PipelineStage,
@@ -20,7 +23,12 @@ import type {
   ScheduleBlock,
   Service,
   SuccessBoard,
+  SearchResults,
   SuccessStage,
+  Task,
+  TaskInput,
+  TaskScope,
+  TaskSummary,
   WhatsappMessage,
 } from './types';
 
@@ -35,7 +43,7 @@ export const ProfessionalsApi = {
 };
 
 export const ClientsApi = {
-  list: (search?: string) => api.get<Client[]>('/clients', { params: { search } }),
+  list: (params: ListQueryParams & { successStage?: SuccessStage } = {}) => api.get<Paginated<Client>>('/clients', { params }),
   get: (id: string) => api.get<Client>(`/clients/${id}`),
   profile: (id: string) =>
     api.get<{ client: Client; appointments: Appointment[]; media: ClientMedia[] }>(`/clients/${id}/profile`),
@@ -54,7 +62,8 @@ export const ClientsApi = {
 };
 
 export const LeadsApi = {
-  list: (params: { search?: string; source?: LeadSource } = {}) => api.get<Client[]>('/leads', { params }),
+  list: (params: ListQueryParams & { source?: LeadSource; stage?: 'LEAD' | 'PIPELINE' } = {}) =>
+    api.get<Paginated<Client>>('/leads', { params }),
   get: (id: string) => api.get<Client>(`/leads/${id}`),
   profile: (id: string) =>
     api.get<{ lead: Client; stageEvents: FunnelStageEvent[]; appointments: Appointment[]; messages: WhatsappMessage[] }>(
@@ -76,8 +85,8 @@ export const PipelineApi = {
     data: { nextActionNote?: string; nextActionAt?: string; proposalValue?: number; paymentMethod?: string },
   ) => api.patch<Client>(`/pipeline/${id}`, data),
   funnelReport: (params: { from?: string; to?: string } = {}) => api.get<FunnelReport>('/pipeline/funnel-report', { params }),
-  originReport: () => api.get<OriginReportEntry[]>('/pipeline/origin-report'),
-  metrics: () => api.get<PipelineMetrics>('/pipeline/metrics'),
+  originReport: (params: { from?: string; to?: string } = {}) => api.get<OriginReportEntry[]>('/pipeline/origin-report', { params }),
+  metrics: (params: { from?: string; to?: string } = {}) => api.get<PipelineMetrics>('/pipeline/metrics', { params }),
 };
 
 export const ClientSuccessApi = {
@@ -152,6 +161,8 @@ export const DashboardApi = {
   today: (professionalId?: string) => api.get<Appointment[]>('/dashboard/today', { params: { professionalId } }),
   kpis: (params: { professionalId?: string; from?: string; to?: string }) =>
     api.get<DashboardKpis>('/dashboard/kpis', { params }),
+  appointmentsByDay: (params: { professionalId?: string; from?: string; to?: string }) =>
+    api.get<Array<{ date: string; count: number }>>('/dashboard/appointments-by-day', { params }),
 };
 
 export const CalendarSyncApi = {
@@ -185,6 +196,8 @@ type MessageTemplatesResponse = {
 };
 
 export const UsersApi = {
+  changeOwnPassword: (currentPassword: string, newPassword: string) =>
+    api.post<{ ok: true }>('/users/me/password', { currentPassword, newPassword }),
   getMessageTemplates: () => api.get<MessageTemplatesResponse>('/users/me/message-templates'),
   updateMessageTemplates: (data: Partial<MessageTemplates>) =>
     api.put<MessageTemplatesResponse>('/users/me/message-templates', data),
@@ -194,4 +207,32 @@ export const UsersApi = {
     api.patch<MessageTemplatesResponse>(`/users/me/message-templates/custom/${id}`, data),
   removeCustomTemplate: (id: string) =>
     api.delete<MessageTemplatesResponse>(`/users/me/message-templates/custom/${id}`),
+};
+
+export const TasksApi = {
+  list: (params: { scope?: TaskScope; assigneeId?: string; clientId?: string; search?: string; limit?: number } = {}) =>
+    api.get<Task[]>('/tasks', { params }),
+  summary: () => api.get<TaskSummary>('/tasks/summary'),
+  create: (data: TaskInput) => api.post<Task>('/tasks', data),
+  update: (id: string, data: Partial<TaskInput>) => api.patch<Task>(`/tasks/${id}`, data),
+  complete: (id: string) => api.post<Task>(`/tasks/${id}/complete`),
+  reopen: (id: string) => api.post<Task>(`/tasks/${id}/reopen`),
+  remove: (id: string) => api.delete<{ ok: true }>(`/tasks/${id}`),
+};
+
+/** Avisa o menu lateral (selo de pendências) que as tarefas mudaram. */
+export const TASKS_CHANGED_EVENT = 'tasks:changed';
+export function notifyTasksChanged() {
+  window.dispatchEvent(new Event(TASKS_CHANGED_EVENT));
+}
+
+export const SearchApi = {
+  search: (q: string) => api.get<SearchResults>('/search', { params: { q } }),
+};
+
+export const InboxApi = {
+  list: (params: { unread?: boolean; limit?: number } = {}) => api.get<AppNotification[]>('/inbox', { params }),
+  unreadCount: () => api.get<{ count: number }>('/inbox/unread-count'),
+  markRead: (id: string) => api.post<{ ok: true }>(`/inbox/${id}/read`),
+  markAllRead: () => api.post<{ updated: number }>('/inbox/read-all'),
 };

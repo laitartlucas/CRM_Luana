@@ -14,6 +14,7 @@ import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { AdvanceToPipelineDto } from './dto/advance-to-pipeline.dto';
 import { ImportRespondiDto } from './dto/import-respondi.dto';
+import { ListLeadsQueryDto } from './dto/list-leads.dto';
 
 @UseGuards(RolesGuard)
 @Controller('leads')
@@ -28,8 +29,8 @@ export class LeadsController {
   ) {}
 
   @Get()
-  list(@Query('search') search?: string, @Query('source') source?: LeadSource) {
-    return this.leadsService.list({ search, source });
+  list(@Query() query: ListLeadsQueryDto) {
+    return this.leadsService.list(query);
   }
 
   @Post('import/respondi')

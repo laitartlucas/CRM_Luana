@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { csrfOriginMiddleware } from './common/middleware/csrf-origin.middleware';
 
 async function bootstrap() {
   // rawBody: true é necessário para validar a assinatura HMAC dos webhooks
@@ -21,9 +22,12 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 3);
   app.use(helmet());
   app.use(cookieParser());
+  app.use(csrfOriginMiddleware(config.get<string>('WEB_APP_URL')));
   app.enableCors({
     origin: config.get<string>('WEB_APP_URL'),
     credentials: true,
+    // O navegador só deixa o front ler este cabeçalho (aviso de exportação cortada) se for exposto.
+    exposedHeaders: ['X-Export-Truncated'],
   });
 
   const port = config.get<number>('PORT', 3000);

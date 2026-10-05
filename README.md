@@ -155,6 +155,55 @@ Google" na tela de login.
 | `cd backend && npm run lint` | Lint do backend |
 | `cd frontend && npm run lint` | Lint do frontend |
 | `cd backend && npx tsc --noEmit` | Type-check sem build completo |
+| `cd backend && npm test` | Testes do backend (Jest, sem precisar de banco nem Redis) |
+| `cd frontend && npm test` | Testes do frontend (Vitest + Testing Library) |
+
+O CI (`.github/workflows/ci.yml`) roda type-check, testes e build dos dois projetos a cada push e pull request.
+
+## Senha do administrador (seed)
+
+O seed não traz mais senhas no código. Defina `SEED_ADMIN_PASSWORD` (mínimo 8 caracteres) ao rodar `npm run seed`;
+`SEED_TEST_PASSWORD` é opcional e cria também o usuário `Teste`. O seed nunca sobrescreve a senha de um usuário que já
+existe — para trocar a senha use **Configurações → Alterar senha** (um ADMIN também pode redefinir a de outro usuário).
+O login é pelo **nome** do usuário (ex.: `Luana`), não pelo e-mail.
+
+## Papéis e permissões
+
+| Área | ADMIN | MANAGER | ATTENDANT |
+|---|:-:|:-:|:-:|
+| Leads, clientes, pipeline, agenda, tarefas, busca (Ctrl+K), notificações | ✅ | ✅ | ✅ (tarefas: só as próprias) |
+| Painel: agendamentos de hoje e gráfico | ✅ | ✅ | ✅ |
+| Painel: faturamento, funil, origem, ticket médio | ✅ | ✅ | — |
+| Exportar planilhas (CSV) de leads, clientes, funil e origem | ✅ | ✅ | — |
+| Conectar WhatsApp (QR Code) e Google Calendar de outra pessoa | ✅ | ✅ | — |
+| Simulador do bot, apagar todos os cadastros, gerenciar usuários | ✅ | — | — |
+
+As regras são aplicadas no backend (`@Roles` + guard global); a tela apenas espelha o que o servidor permite.
+
+## Segurança em resumo
+
+- Sessão por cookie httpOnly com renovação; logout, troca de senha, desativação e mudança de papel **invalidam as sessões
+  abertas** (`tokenVersion`). 5 senhas erradas bloqueiam a conta por 10 minutos.
+- Escritas com cookie vindas de outra origem são recusadas (defesa de CSRF, já que os cookies de produção são `SameSite=None`).
+- O audit log registra criação/edição/exclusão e **cada exportação de dados** (quem, filtros, quantas linhas); nunca guarda hash
+  de senha. Planilhas CSV neutralizam injeção de fórmula.
+
+## Relatórios, exportações e notificações
+
+- **Painel** com período (este mês, mês passado, 7/30 dias, este ano ou datas livres, guardado na URL). Datas são interpretadas
+  no fuso do usuário; o limite é 400 dias.
+- **Exportar CSV** (`;` como separador, com BOM para o Excel): leads e clientes respeitam os filtros da lista; funil e origem
+  respeitam o período. Passando de 20.000 linhas o arquivo é cortado e a tela avisa.
+- **Notificações** (sino): tarefas perto do prazo/atrasadas, conversas aguardando atendimento humano, novas leads do Respondi,
+  agendamentos feitos pelo WhatsApp e cancelamentos. Uma varredura a cada 2 minutos (fila `inbox` no Redis) gera os avisos
+  derivados do estado do sistema; ela depende do Redis estar de pé.
+
+## Acessibilidade
+
+Auditada com o axe-core (WCAG 2.1 AA) em todas as telas e camadas (modais, busca, sino, confirmação, menu do celular): zero
+violações. Inclui link "pular para o conteúdo", foco visível, modais com foco preso e Esc, e o Pipeline pode ser movido por um
+seletor (além de arrastar). Para repetir a auditoria: `cd frontend && npm i`, abra o app e rode `axe.run()` do
+`node_modules/axe-core/axe.min.js` no console de cada tela.
 
 ## Documentação de arquitetura
 
@@ -174,6 +223,8 @@ Google" na tela de login.
 - 🧪 **Mockável/pendente de credencial externa**: envio real de WhatsApp
   (`MockWhatsappProvider` até a conta Meta ser aprovada — troca de 1 variável
   de ambiente para ativar o real).
+- ⚠️ **Limites conhecidos**: ver "Riscos em aberto" em [`docs/06-auditoria-e-plano-evolucao.md`](./docs/06-auditoria-e-plano-evolucao.md)
+  (dependências do NestJS 10 com avisos de segurança, multi-tenancy ainda não existe, testes de integração com banco real).
 - 🗺️ **Fase 2/3 (não implementado ainda, ver plano)**: assistente por IA no
   WhatsApp (NLU), score preditivo de no-show, otimização automática de
   agenda, multicanal (Instagram/SMS), relatórios preditivos avançados,

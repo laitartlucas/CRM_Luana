@@ -9,6 +9,7 @@ import { AppointmentsApi, ScheduleBlocksApi } from '../api/endpoints';
 import type { Appointment } from '../api/types';
 import { useProfessional } from '../hooks/useProfessional';
 import { AppointmentFormModal } from '../components/AppointmentFormModal';
+import { useToast } from '../components/ui/Toast';
 import { AppointmentDetailModal } from '../components/AppointmentDetailModal';
 import { BlockFormModal } from '../components/BlockFormModal';
 
@@ -22,6 +23,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function Agenda() {
   const { professional, loading } = useProfessional();
+  const toast = useToast();
   const calendarRef = useRef<FullCalendar | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -84,7 +86,7 @@ export default function Agenda() {
       refresh();
     } catch {
       arg.revert();
-      alert('Não foi possível remarcar: horário indisponível.');
+      toast.error('Não foi possível remarcar: horário indisponível.');
     }
   }
 
@@ -126,7 +128,14 @@ export default function Agenda() {
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
           select={handleSelect}
-          datesSet={(arg) => loadRange(arg.start, arg.end)}
+          datesSet={(arg) => {
+            loadRange(arg.start, arg.end);
+            // O FullCalendar marca os ícones das setas como role="img" sem texto; os botões já têm nome próprio.
+            document.querySelectorAll('.fc .fc-icon').forEach((icon) => {
+              icon.removeAttribute('role');
+              icon.setAttribute('aria-hidden', 'true');
+            });
+          }}
         />
       </div>
 

@@ -6,6 +6,21 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AUDIT_ENTITY_KEY } from '../decorators/audit.decorator';
 import { AuditAction } from '@prisma/client';
 
+// Campos que nunca podem ir para o audit log (hash de senha, tokens, ids de provedores).
+const SENSITIVE_KEYS = new Set(['passwordHash', 'googleId', 'accessToken', 'refreshToken', 'tokenVersion']);
+
+export function redactSensitive(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(redactSensitive);
+  if (value && typeof value === 'object' && !(value instanceof Date)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([key]) => !SENSITIVE_KEYS.has(key))
+        .map(([key, v]) => [key, redactSensitive(v)]),
+    );
+  }
+  return value;
+}
+
 /**
  * Interceptor global de auditoria. Handlers de escrita marcados com
  * @Audit('entityName') têm o estado "antes" (para UPDATE/DELETE) capturado
@@ -58,8 +73,8 @@ export class AuditInterceptor implements NestInterceptor {
               entity,
               entityId: finalEntityId,
               action,
-              before: before as any,
-              after: after as any,
+              before: redactSensitive(before) as any,
+              after: redactSensitive(after) as any,
               reason: reason ?? null,
             },
           })

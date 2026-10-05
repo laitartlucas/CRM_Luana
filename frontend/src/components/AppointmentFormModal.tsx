@@ -46,17 +46,21 @@ export function AppointmentFormModal({
       setClientResults([]);
       return;
     }
+    let cancelled = false; // uma busca antiga não pode sobrescrever a mais nova
     const timeout = setTimeout(() => {
-      Promise.all([ClientsApi.list(clientSearch), LeadsApi.list({ search: clientSearch })]).then(
-        ([clients, leads]) => {
-          setClientResults([
-            ...clients.data.map((c) => ({ ...c, _kind: 'CLIENTE' as const })),
-            ...leads.data.map((l) => ({ ...l, _kind: 'LEAD' as const })),
-          ]);
-        },
-      );
+      const query = { search: clientSearch.trim(), pageSize: 8, sort: 'name', order: 'asc' as const };
+      Promise.all([ClientsApi.list(query), LeadsApi.list(query)]).then(([clients, leads]) => {
+        if (cancelled) return;
+        setClientResults([
+          ...clients.data.items.map((c) => ({ ...c, _kind: 'CLIENTE' as const })),
+          ...leads.data.items.map((l) => ({ ...l, _kind: 'LEAD' as const })),
+        ]);
+      });
     }, 250);
-    return () => clearTimeout(timeout);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [clientSearch]);
 
   useEffect(() => {
